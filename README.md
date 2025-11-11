@@ -21,6 +21,27 @@ Interactive tool for exploring two-dimensional electron gas (2DEG) physics at ox
   - Escape depth effects (λ, θ dependence)
   - Adsorbate dipole layer effects
 
+### 🔬 Experiment Comparison (NEW in v2.0)
+- **CSV Data Import**: Load experimental UPS/XPS measurements
+  - Format A: Raw data (T, WF, core level)
+  - Format B: Processed data (ΔWF, ΔE_CL)
+- **Automatic Parameter Fitting**: Optimize W and η to match experimental data
+- **Residual Analysis**: Comprehensive goodness-of-fit diagnostics (R², RMSE, residual plots)
+- **Theory-Experiment Overlay**: Direct visual comparison
+- **Annealing Trajectory**: Visualize temperature-dependent evolution
+
+### 📤 Publication Export (NEW in v2.0)
+- **High-Quality Figures**:
+  - SVG (vector graphics for editing)
+  - PNG (300/600/1200 DPI)
+  - PDF (document-ready)
+- **Journal Styles**:
+  - Nature (warm colors, grid)
+  - Science (cool colors, clean)
+  - ACS (standard colors)
+  - Grayscale (B&W with markers)
+- **Customizable**: Size presets, fonts, line widths
+
 ### 🔧 Interactive Controls
 - Real-time parameter adjustment with sliders
 - Model comparison (overlay up to 4 curves)
@@ -28,7 +49,7 @@ Interactive tool for exploring two-dimensional electron gas (2DEG) physics at ox
 - Additional visualizations: V(z), n(z), w(z) profiles
 
 ### 💾 Export Options
-- **Figures**: PNG (300 dpi), SVG (vector)
+- **Figures**: PNG, SVG, PDF (publication-quality)
 - **Data**: CSV with all parameters
 - **Configuration**: JSON for reproducibility
 
@@ -55,10 +76,11 @@ pip install -r requirements.txt
 ```
 streamlit>=1.28.0
 plotly>=5.17.0
+matplotlib>=3.7.0  # NEW: For publication exports
 numpy>=1.24.0
-scipy>=1.11.0
+scipy>=1.11.0      # Used for parameter fitting
 pandas>=2.0.0
-kaleido>=0.2.1  # For static image export
+kaleido>=0.2.1     # For Plotly static image export
 ```
 
 ## Usage
@@ -85,7 +107,17 @@ The application will open in your default web browser at `http://localhost:8501`
 
 ### Example Use Cases
 
-#### 1. Compare Models for Different Depletion Widths
+#### 1. Analyze In₂O₃ Annealing Experiment (NEW)
+```
+1. Go to "Experiment Comparison" tab
+2. Click "Load Sample Data" (or upload your CSV)
+3. Review data preview and estimated η
+4. Enable "Fit η" and click "Run Fitting"
+5. View R² and residual analysis
+6. Export publication figure in "Publication Export" tab
+```
+
+#### 2. Compare Models for Different Depletion Widths
 ```
 1. Set W = 2 nm, select M1, click "Add to Compare"
 2. Set W = 3 nm, select M1, click "Add to Compare"
@@ -93,7 +125,7 @@ The application will open in your default web browser at `http://localhost:8501`
 4. Observe linear scaling of nₛ with 1/W
 ```
 
-#### 2. Explore Adsorbate Effects
+#### 3. Explore Adsorbate Effects
 ```
 1. Set Φₛ = 0.4 eV
 2. Check "Show with adsorbates"
@@ -101,37 +133,45 @@ The application will open in your default web browser at `http://localhost:8501`
 4. Observe vertical shift in Figure 2 (slope unchanged)
 ```
 
-#### 3. Validate XPS Depth Sensitivity
+#### 4. Generate Publication Figures (NEW)
 ```
-1. Enable "Show XPS weight w(z)"
-2. Vary λ from 0.5 to 3.0 nm
-3. Vary θ from 0° to 60°
-4. Observe η factor changes
+1. Configure your desired plot in "Core Figures"
+2. Go to "Publication Export" tab
+3. Select journal style (e.g., "Nature")
+4. Choose format (SVG for vector graphics)
+5. Select size preset (e.g., "Double column")
+6. Click "Generate Publication Figures"
+7. Download and import into Illustrator/Inkscape
 ```
 
 ## Project Structure
 
 ```
 2DEG-S-P-toy/
-├── app.py                  # Main Streamlit application
+├── app.py                      # Main Streamlit application
 ├── models/
 │   ├── __init__.py
-│   ├── triangular.py      # M1: Triangular model
-│   ├── fang_howard.py     # M2: Fang-Howard model
-│   └── parabolic.py       # M3: Parabolic model
+│   ├── triangular.py          # M1: Triangular model
+│   ├── fang_howard.py         # M2: Fang-Howard model
+│   └── parabolic.py           # M3: Parabolic model
 ├── physics/
 │   ├── __init__.py
-│   ├── constants.py       # Physical constants
-│   ├── units.py           # Unit conversions
-│   └── xps.py             # XPS modeling
+│   ├── constants.py           # Physical constants
+│   ├── units.py               # Unit conversions
+│   └── xps.py                 # XPS modeling
 ├── ui/
 │   ├── __init__.py
-│   └── plots.py           # Plotly plotting functions
+│   └── plots.py               # Plotly plotting functions
 ├── utils/
 │   ├── __init__.py
-│   └── export.py          # Export utilities
+│   ├── export.py              # Export utilities
+│   ├── experiment_data.py     # NEW: Data import & validation
+│   ├── fitting.py             # NEW: Parameter optimization
+│   └── publication_export.py  # NEW: High-quality figure export
 ├── tests/
-│   └── test_models.py     # Unit tests
+│   └── test_models.py         # Unit tests
+├── sample_data_In2O3.csv      # NEW: Example experimental data
+├── CHANGELOG.md               # NEW: Version history
 ├── README.md
 └── requirements.txt
 ```
@@ -264,6 +304,15 @@ MIT License - see LICENSE file for details.
 - Visualizations created with Plotly
 
 ## Version History
+
+- **v2.0.0** (2025-11-11): Major feature update
+  - ✨ Experiment comparison with CSV data import
+  - 🎯 Automatic parameter fitting (W, η optimization)
+  - 📊 Comprehensive residual analysis
+  - 📤 Publication-quality figure export (SVG/PNG/PDF)
+  - 🎨 Journal-specific styles (Nature, Science, ACS, Grayscale)
+  - 🧪 Beta features tab for upcoming features
+  - See [CHANGELOG.md](CHANGELOG.md) for details
 
 - **v1.0.0** (2025-11-11): Initial release
   - Three physical models (M1, M2, M3)

@@ -12,6 +12,7 @@ pandas>=2.0.0
 
 # Visualization
 plotly>=5.17.0
+matplotlib>=3.7.0
 
 # Image export (for saving plots as PNG/SVG)
 kaleido>=0.2.1

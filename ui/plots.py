@@ -366,3 +366,286 @@ def create_combined_profile_plot(z_nm, V_eV, n_z=None, w_z=None):
     )
 
     return fig
+
+
+def create_comparison_CL_vs_WF_plot(
+    exp_data,
+    theory_data=None,
+    fit_result=None,
+    title="Core Level Shift vs Work Function Change"
+):
+    """
+    Create comparison plot: ΔE_CL vs ΔWF.
+
+    Parameters
+    ----------
+    exp_data : dict
+        Experimental data with 'Delta_WF' and 'Delta_CL'
+    theory_data : dict, optional
+        Theory data with 'Delta_WF' and 'Delta_CL'
+    fit_result : dict, optional
+        Fitting results
+    title : str
+        Plot title
+
+    Returns
+    -------
+    fig : plotly.graph_objects.Figure
+        Plotly figure object
+    """
+    fig = go.Figure()
+
+    # Experimental data
+    if exp_data is not None:
+        fig.add_trace(go.Scatter(
+            x=exp_data['Delta_WF'],
+            y=exp_data['Delta_CL'],
+            mode='markers',
+            name='Experiment',
+            marker=dict(size=12, color='red', symbol='circle',
+                       line=dict(width=1.5, color='black')),
+            hovertemplate='ΔWF: %{x:.3f} eV<br>ΔE_CL: %{y:.3f} eV<extra></extra>'
+        ))
+
+    # Theory curve
+    if theory_data is not None:
+        fig.add_trace(go.Scatter(
+            x=theory_data['Delta_WF'],
+            y=theory_data['Delta_CL'],
+            mode='lines',
+            name='Theory',
+            line=dict(color='blue', width=3),
+            hovertemplate='ΔWF: %{x:.3f} eV<br>ΔE_CL: %{y:.3f} eV<extra></extra>'
+        ))
+
+    # Fitted curve
+    if fit_result is not None and 'theory_Delta_CL' in fit_result:
+        # Sort for smooth line
+        sort_idx = np.argsort(exp_data['Delta_WF'])
+        fig.add_trace(go.Scatter(
+            x=exp_data['Delta_WF'][sort_idx],
+            y=fit_result['theory_Delta_CL'][sort_idx],
+            mode='lines',
+            name=f"Fit (η={fit_result['eta_fit']:.3f}, R²={fit_result['r_squared']:.3f})",
+            line=dict(color='green', width=3, dash='dash'),
+            hovertemplate='ΔWF: %{x:.3f} eV<br>ΔE_CL (fit): %{y:.3f} eV<extra></extra>'
+        ))
+
+    fig.update_layout(
+        title=title,
+        xaxis_title="Work Function Change ΔWF (eV)",
+        yaxis_title="Core Level Shift ΔE_CL (eV)",
+        hovermode='closest',
+        template='plotly_white',
+        font=dict(size=12),
+        width=800,
+        height=600,
+        showlegend=True,
+        legend=dict(
+            yanchor="top",
+            y=0.99,
+            xanchor="left",
+            x=0.01
+        )
+    )
+
+    fig.update_xaxes(showgrid=True, gridwidth=1, gridcolor='LightGray')
+    fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor='LightGray')
+
+    return fig
+
+
+def create_residual_analysis_plot(exp_data, fit_result):
+    """
+    Create comprehensive residual analysis plots.
+
+    Parameters
+    ----------
+    exp_data : dict
+        Experimental data
+    fit_result : dict
+        Fitting results with residuals
+
+    Returns
+    -------
+    fig : plotly.graph_objects.Figure
+        Plotly figure with subplots
+    """
+    from plotly.subplots import make_subplots
+    from scipy import stats
+
+    residuals = fit_result['residuals']
+
+    fig = make_subplots(
+        rows=2, cols=2,
+        subplot_titles=(
+            'Residuals vs ΔWF',
+            'Residuals Distribution',
+            'Predicted vs Actual',
+            'Residual Statistics'
+        ),
+        specs=[[{"type": "scatter"}, {"type": "histogram"}],
+               [{"type": "scatter"}, {"type": "table"}]]
+    )
+
+    # 1. Residuals vs ΔWF
+    fig.add_trace(
+        go.Scatter(
+            x=exp_data['Delta_WF'],
+            y=residuals,
+            mode='markers',
+            marker=dict(size=10, color='blue'),
+            name='Residuals',
+            showlegend=False
+        ),
+        row=1, col=1
+    )
+    fig.add_hline(y=0, line_dash="dash", line_color="red", row=1, col=1)
+
+    # 2. Histogram
+    fig.add_trace(
+        go.Histogram(
+            x=residuals,
+            nbinsx=15,
+            marker=dict(color='lightblue', line=dict(color='black', width=1)),
+            name='Distribution',
+            showlegend=False
+        ),
+        row=1, col=2
+    )
+
+    # 3. Predicted vs Actual
+    predicted = exp_data['Delta_CL'] - residuals
+    fig.add_trace(
+        go.Scatter(
+            x=exp_data['Delta_CL'],
+            y=predicted,
+            mode='markers',
+            marker=dict(size=10, color='green'),
+            name='Data',
+            showlegend=False
+        ),
+        row=2, col=1
+    )
+    # Perfect fit line
+    min_val = min(exp_data['Delta_CL'].min(), predicted.min())
+    max_val = max(exp_data['Delta_CL'].max(), predicted.max())
+    fig.add_trace(
+        go.Scatter(
+            x=[min_val, max_val],
+            y=[min_val, max_val],
+            mode='lines',
+            line=dict(color='red', dash='dash'),
+            name='Perfect fit',
+            showlegend=False
+        ),
+        row=2, col=1
+    )
+
+    # 4. Statistics table
+    mean_res = np.mean(residuals)
+    std_res = np.std(residuals)
+    max_res = np.max(np.abs(residuals))
+
+    fig.add_trace(
+        go.Table(
+            header=dict(values=['Statistic', 'Value'],
+                       fill_color='lightgray',
+                       align='left'),
+            cells=dict(values=[
+                ['Mean residual', 'Std residual', 'Max |residual|', 'RMSE', 'R²'],
+                [f'{mean_res:.4f} eV', f'{std_res:.4f} eV', f'{max_res:.4f} eV',
+                 f"{fit_result['rmse']:.4f} eV", f"{fit_result['r_squared']:.4f}"]
+            ],
+            fill_color='white',
+            align='left')
+        ),
+        row=2, col=2
+    )
+
+    # Update axes labels
+    fig.update_xaxes(title_text="ΔWF (eV)", row=1, col=1)
+    fig.update_yaxes(title_text="Residual (eV)", row=1, col=1)
+
+    fig.update_xaxes(title_text="Residual (eV)", row=1, col=2)
+    fig.update_yaxes(title_text="Count", row=1, col=2)
+
+    fig.update_xaxes(title_text="Actual ΔE_CL (eV)", row=2, col=1)
+    fig.update_yaxes(title_text="Predicted ΔE_CL (eV)", row=2, col=1)
+
+    fig.update_layout(
+        height=800,
+        showlegend=False,
+        template='plotly_white'
+    )
+
+    return fig
+
+
+def create_annealing_trajectory_plot(exp_data, title="Annealing Trajectory"):
+    """
+    Create annealing trajectory plot showing evolution with temperature.
+
+    Parameters
+    ----------
+    exp_data : dict
+        Experimental data with 'T_degC', 'Delta_WF', 'Delta_CL'
+    title : str
+        Plot title
+
+    Returns
+    -------
+    fig : plotly.graph_objects.Figure
+        Plotly figure object
+    """
+    if 'T_degC' not in exp_data:
+        return None
+
+    fig = make_subplots(
+        rows=1, cols=2,
+        subplot_titles=('ΔWF vs Temperature', 'ΔE_CL vs Temperature')
+    )
+
+    # ΔWF vs T
+    fig.add_trace(
+        go.Scatter(
+            x=exp_data['T_degC'],
+            y=exp_data['Delta_WF'],
+            mode='lines+markers',
+            marker=dict(size=10, color='red'),
+            line=dict(color='red', width=2),
+            name='ΔWF',
+            hovertemplate='T: %{x}°C<br>ΔWF: %{y:.3f} eV<extra></extra>'
+        ),
+        row=1, col=1
+    )
+
+    # ΔE_CL vs T
+    fig.add_trace(
+        go.Scatter(
+            x=exp_data['T_degC'],
+            y=exp_data['Delta_CL'],
+            mode='lines+markers',
+            marker=dict(size=10, color='blue'),
+            line=dict(color='blue', width=2),
+            name='ΔE_CL',
+            hovertemplate='T: %{x}°C<br>ΔE_CL: %{y:.3f} eV<extra></extra>'
+        ),
+        row=1, col=2
+    )
+
+    # Update axes
+    fig.update_xaxes(title_text="Temperature (°C)", row=1, col=1)
+    fig.update_yaxes(title_text="ΔWF (eV)", row=1, col=1)
+
+    fig.update_xaxes(title_text="Temperature (°C)", row=1, col=2)
+    fig.update_yaxes(title_text="ΔE_CL (eV)", row=1, col=2)
+
+    fig.update_layout(
+        title=title,
+        height=400,
+        showlegend=False,
+        template='plotly_white'
+    )
+
+    return fig

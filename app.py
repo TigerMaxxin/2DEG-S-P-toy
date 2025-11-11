@@ -10,6 +10,7 @@ import numpy as np
 import pandas as pd
 from datetime import datetime
 import io
+import matplotlib.pyplot as plt
 
 # Import models
 from models import TriangularModel, FangHowardModel, ParabolicModel
@@ -24,7 +25,20 @@ from physics.units import ns_to_display, ns_from_display, m_to_nm, nm_to_m, J_to
 from ui.plots import (
     create_ns_vs_Phi_s_plot, create_Delta_WF_vs_ns_plot,
     create_potential_profile_plot, create_electron_density_plot,
-    create_xps_weight_plot, create_combined_profile_plot
+    create_xps_weight_plot, create_combined_profile_plot,
+    create_comparison_CL_vs_WF_plot, create_residual_analysis_plot,
+    create_annealing_trajectory_plot
+)
+from utils.experiment_data import (
+    import_experimental_data, get_format_example_text, create_sample_data
+)
+from utils.fitting import (
+    run_parameter_fitting, linear_fit_eta, estimate_initial_parameters
+)
+from utils.publication_export import (
+    get_journal_style, setup_matplotlib_style, create_publication_figure_1,
+    create_publication_figure_2, create_publication_comparison_figure,
+    save_figure, get_figure_size_presets
 )
 
 # Page configuration
@@ -42,6 +56,14 @@ st.markdown("**Interactive tool for exploring 2DEG physics and XPS measurements*
 # Initialize session state for comparison curves
 if 'comparison_curves' not in st.session_state:
     st.session_state.comparison_curves = []
+
+# Initialize session state for experimental data
+if 'exp_data' not in st.session_state:
+    st.session_state.exp_data = None
+if 'exp_data_loaded' not in st.session_state:
+    st.session_state.exp_data_loaded = False
+if 'fit_result' not in st.session_state:
+    st.session_state.fit_result = None
 
 # Sidebar - Parameter Controls
 st.sidebar.header("Parameters")
@@ -193,10 +215,12 @@ with col2:
     clear_comparison = st.button("Clear Compare", use_container_width=True)
 
 # Main area - Create tabs
-tab1, tab2, tab3, tab4 = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
     "📊 Core Figures",
     "📈 Additional Plots",
-    "💾 Export Data",
+    "🔬 Experiment Comparison",
+    "📤 Publication Export",
+    "🧪 Beta Features",
     "ℹ️ About"
 ])
 
@@ -374,28 +398,338 @@ with tab2:
             st.table(df_energies)
 
 # ============================================================================
-# TAB 3: EXPORT DATA
+# TAB 3: EXPERIMENT COMPARISON
 # ============================================================================
 
 with tab3:
-    st.subheader("Export Data and Figures")
+    st.header("🔬 Theory-Experiment Comparison")
+
+    # Data import section
+    st.subheader("1. Import Experimental Data")
+
+    col1, col2 = st.columns([3, 1])
+
+    with col1:
+        uploaded_file = st.file_uploader(
+            "Upload CSV file with experimental data",
+            type=['csv'],
+            help="See format requirements below"
+        )
+
+    with col2:
+        if st.button("📋 Show Format"):
+            st.session_state['show_format'] = not st.session_state.get('show_format', False)
+
+        if st.button("📥 Load Sample Data"):
+            # Create sample data
+            sample_df = create_sample_data()
+            sample_csv = sample_df.to_csv(index=False).encode('utf-8')
+
+            # Import sample data
+            import_result = import_experimental_data(sample_csv)
+            if import_result['success']:
+                st.session_state.exp_data = import_result['data']
+                st.session_state.exp_data_loaded = True
+                st.success(import_result['message'])
+                st.rerun()
+
+    # Show format example
+    if st.session_state.get('show_format', False):
+        st.markdown(get_format_example_text())
+
+    # Process uploaded file
+    if uploaded_file is not None:
+        file_content = uploaded_file.read()
+        import_result = import_experimental_data(file_content)
+
+        if import_result['success']:
+            st.session_state.exp_data = import_result['data']
+            st.session_state.exp_data_loaded = True
+            st.success(import_result['message'])
+        else:
+            st.error(import_result['message'])
+
+    # Clear data button
+    if st.session_state.exp_data_loaded:
+        col1, col2 = st.columns([5, 1])
+        with col2:
+            if st.button("🗑️ Clear Data"):
+                st.session_state.exp_data = None
+                st.session_state.exp_data_loaded = False
+                st.session_state.fit_result = None
+                st.rerun()
+
+    # Display data and analysis
+    if st.session_state.exp_data_loaded:
+        exp_data = st.session_state.exp_data
+
+        st.markdown("---")
+        st.subheader("2. Data Preview")
+
+        # Create preview dataframe
+        preview_df = pd.DataFrame({
+            'T (°C)': exp_data.get('T_degC', np.arange(len(exp_data['Delta_WF']))),
+            'ΔWF (eV)': exp_data['Delta_WF'],
+            'ΔE_CL (eV)': exp_data['Delta_CL']
+        })
+        st.dataframe(preview_df, use_container_width=True)
+
+        # Quick statistics
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("Data Points", len(exp_data['Delta_WF']))
+        with col2:
+            st.metric("ΔWF Range", f"{exp_data['Delta_WF'].min():.3f} to {exp_data['Delta_WF'].max():.3f} eV")
+        with col3:
+            # Estimate eta from slope
+            lin_fit = linear_fit_eta(exp_data)
+            st.metric("Estimated η", f"{lin_fit['eta_exp']:.3f}")
+
+        st.markdown("---")
+        st.subheader("3. Parameter Fitting")
+
+        with st.expander("🔧 Automatic Fitting Options", expanded=True):
+            col1, col2, col3 = st.columns(3)
+
+            with col1:
+                fit_W = st.checkbox("Fit W (depletion width)", value=False,
+                                   help="Optimize depletion width parameter")
+                fit_eta = st.checkbox("Fit η (XPS sampling factor)", value=True,
+                                     help="Optimize XPS sampling depth factor")
+
+            with col2:
+                W_guess = st.number_input("W initial (nm)", 1.0, 10.0, W_nm, 0.1)
+                W_bounds_range = st.slider("W bounds (nm)", 1.0, 10.0, (2.0, 5.0), 0.1)
+
+            with col3:
+                eta_guess = st.number_input("η initial", 0.5, 0.99, 0.85, 0.01)
+                eta_bounds_range = st.slider("η bounds", 0.5, 0.99, (0.7, 0.95), 0.01)
+
+            if st.button("🎯 Run Fitting", type="primary", use_container_width=True):
+                with st.spinner("Optimizing parameters..."):
+                    fit_result = run_parameter_fitting(
+                        exp_data=exp_data,
+                        model_type=model_type,
+                        fit_params={'W': fit_W, 'eta': fit_eta},
+                        initial_guess={'W': W_guess, 'eta': eta_guess},
+                        bounds={'W': W_bounds_range, 'eta': eta_bounds_range},
+                        epsilon_r=epsilon_r,
+                        m_star_ratio=m_star_ratio
+                    )
+
+                if fit_result['success']:
+                    st.session_state.fit_result = fit_result
+                    st.success("Fitting completed successfully!")
+                    st.rerun()
+                else:
+                    st.error(fit_result['message'])
+
+        # Display fitting results
+        if st.session_state.fit_result is not None:
+            fit_result = st.session_state.fit_result
+
+            st.subheader("Fitting Results")
+
+            col1, col2, col3, col4 = st.columns(4)
+            with col1:
+                delta_W = fit_result['W_fit'] - W_guess
+                st.metric("Fitted W", f"{fit_result['W_fit']:.2f} nm",
+                         delta=f"{delta_W:+.2f} nm")
+            with col2:
+                delta_eta = fit_result['eta_fit'] - eta_guess
+                st.metric("Fitted η", f"{fit_result['eta_fit']:.3f}",
+                         delta=f"{delta_eta:+.3f}")
+            with col3:
+                st.metric("R² (goodness)", f"{fit_result['r_squared']:.4f}")
+            with col4:
+                st.metric("RMSE", f"{fit_result['rmse']:.4f} eV")
+
+            # Apply fitted parameters
+            if st.button("✅ Apply Fitted Parameters to Model"):
+                # This would require updating sidebar values - show info instead
+                st.info(f"**Fitted parameters:**\n- W = {fit_result['W_fit']:.2f} nm\n- η ≈ λ = {fit_result['lambda_fit']:.2f} nm")
+
+        st.markdown("---")
+        st.subheader("4. Comparison Plots")
+
+        # Main comparison plot: ΔE_CL vs ΔWF
+        fig_comparison = create_comparison_CL_vs_WF_plot(
+            exp_data=exp_data,
+            theory_data=None,
+            fit_result=st.session_state.fit_result
+        )
+        st.plotly_chart(fig_comparison, use_container_width=True)
+
+        # Annealing trajectory if temperature data available
+        if 'T_degC' in exp_data:
+            fig_trajectory = create_annealing_trajectory_plot(exp_data)
+            if fig_trajectory is not None:
+                st.plotly_chart(fig_trajectory, use_container_width=True)
+
+        # Residual analysis
+        if st.session_state.fit_result is not None:
+            st.markdown("---")
+            st.subheader("5. Residual Analysis")
+
+            fig_residuals = create_residual_analysis_plot(
+                exp_data=exp_data,
+                fit_result=st.session_state.fit_result
+            )
+            st.plotly_chart(fig_residuals, use_container_width=True)
+
+# ============================================================================
+# TAB 4: PUBLICATION EXPORT
+# ============================================================================
+
+with tab4:
+    st.header("📤 Publication-Quality Export")
+
+    st.markdown("Export high-quality figures optimized for journal submission")
+
+    # Export settings
+    st.subheader("Export Settings")
+
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        st.markdown("**Format**")
+        format_type = st.radio(
+            "Format type",
+            ["PNG (raster)", "SVG (vector)", "PDF (document)"],
+            label_visibility="collapsed"
+        )
+
+        if "PNG" in format_type:
+            dpi = st.selectbox("Resolution (DPI)", [300, 600, 1200], index=0)
+        else:
+            dpi = 300
+
+    with col2:
+        st.markdown("**Style**")
+        journal_style = st.selectbox(
+            "Journal style",
+            ["Default", "Nature", "Science", "ACS", "Grayscale"]
+        )
+
+        font_size = st.slider("Font size (pt)", 8, 16, 12)
+
+    with col3:
+        st.markdown("**Size**")
+        size_presets = get_figure_size_presets()
+        size_preset = st.selectbox(
+            "Size preset",
+            list(size_presets.keys())
+        )
+
+        fig_size = size_presets[size_preset]
+        st.caption(f"Size: {fig_size[0]}\" × {fig_size[1]}\"")
+
+    st.markdown("---")
+
+    # Configure matplotlib style
+    style_config = get_journal_style(journal_style)
+    setup_matplotlib_style(font_size=font_size, line_width=2.0, journal_style=style_config)
+
+    # Figure selection
+    st.subheader("Select Figures to Export")
+
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        export_fig1 = st.checkbox("Figure 1: ns vs Φs", value=True)
+    with col2:
+        export_fig2 = st.checkbox("Figure 2: ΔWF vs ns", value=True)
+    with col3:
+        export_comparison = st.checkbox(
+            "Figure 3: Comparison",
+            value=st.session_state.exp_data_loaded,
+            disabled=not st.session_state.exp_data_loaded
+        )
+
+    # Generate and export button
+    if st.button("🎨 Generate Publication Figures", type="primary", use_container_width=True):
+        with st.spinner("Generating high-quality figures..."):
+            exported_files = []
+
+            # Figure 1
+            if export_fig1:
+                try:
+                    mpl_fig1 = create_publication_figure_1(
+                        curves_data=curves_fig1,
+                        exp_data=None,
+                        style_config=style_config,
+                        size=fig_size
+                    )
+
+                    fmt = 'png' if 'PNG' in format_type else ('svg' if 'SVG' in format_type else 'pdf')
+                    img_bytes = save_figure(mpl_fig1, format_type=fmt, dpi=dpi)
+
+                    exported_files.append(('figure1_ns_vs_Phis.' + fmt, img_bytes))
+                    plt.close(mpl_fig1)
+                except Exception as e:
+                    st.error(f"Error generating Figure 1: {str(e)}")
+
+            # Figure 2
+            if export_fig2:
+                try:
+                    mpl_fig2 = create_publication_figure_2(
+                        curves_data=curves_fig2,
+                        exp_data=None,
+                        style_config=style_config,
+                        size=fig_size
+                    )
+
+                    fmt = 'png' if 'PNG' in format_type else ('svg' if 'SVG' in format_type else 'pdf')
+                    img_bytes = save_figure(mpl_fig2, format_type=fmt, dpi=dpi)
+
+                    exported_files.append(('figure2_Delta_WF_vs_ns.' + fmt, img_bytes))
+                    plt.close(mpl_fig2)
+                except Exception as e:
+                    st.error(f"Error generating Figure 2: {str(e)}")
+
+            # Comparison figure
+            if export_comparison and st.session_state.exp_data_loaded:
+                try:
+                    mpl_fig3 = create_publication_comparison_figure(
+                        exp_data=st.session_state.exp_data,
+                        theory_data=None,
+                        fit_result=st.session_state.fit_result,
+                        style_config=style_config,
+                        size=fig_size
+                    )
+
+                    fmt = 'png' if 'PNG' in format_type else ('svg' if 'SVG' in format_type else 'pdf')
+                    img_bytes = save_figure(mpl_fig3, format_type=fmt, dpi=dpi)
+
+                    exported_files.append(('figure3_comparison.' + fmt, img_bytes))
+                    plt.close(mpl_fig3)
+                except Exception as e:
+                    st.error(f"Error generating Figure 3: {str(e)}")
+
+        # Display download buttons
+        if exported_files:
+            st.success(f"✅ Generated {len(exported_files)} figure(s)")
+
+            st.markdown("---")
+            st.subheader("Download Figures")
+
+            for filename, img_bytes in exported_files:
+                mime_type = 'image/png' if '.png' in filename else ('image/svg+xml' if '.svg' in filename else 'application/pdf')
+
+                st.download_button(
+                    label=f"⬇️ Download {filename}",
+                    data=img_bytes,
+                    file_name=filename,
+                    mime=mime_type,
+                    use_container_width=True
+                )
+
+    st.markdown("---")
+    st.subheader("Data Export")
 
     col1, col2 = st.columns(2)
 
     with col1:
-        st.markdown("### Export Figures")
-
-        # Export Figure 1 as PNG
-        if st.button("Download Figure 1 (PNG)", use_container_width=True):
-            fig1.write_image("figure1_ns_vs_Phi_s.png", width=800, height=500, scale=2)
-            st.success("Figure 1 saved as figure1_ns_vs_Phi_s.png")
-
-        # Export Figure 2 as PNG
-        if st.button("Download Figure 2 (PNG)", use_container_width=True):
-            fig2.write_image("figure2_Delta_WF_vs_ns.png", width=800, height=500, scale=2)
-            st.success("Figure 2 saved as figure2_Delta_WF_vs_ns.png")
-
-    with col2:
         st.markdown("### Export Data")
 
         # Prepare CSV data
@@ -450,11 +784,113 @@ with tab3:
             use_container_width=True
         )
 
+    with col2:
+        st.markdown("### Quick Export (Plotly)")
+
+        # Quick export buttons for interactive figures
+        st.caption("Export interactive Plotly figures (lower quality)")
+
+        if st.button("Download Fig 1 (HTML)", use_container_width=True):
+            fig1_html = fig1.to_html()
+            st.download_button(
+                label="⬇️ Save HTML",
+                data=fig1_html,
+                file_name=f"figure1_{datetime.now().strftime('%Y%m%d_%H%M%S')}.html",
+                mime="text/html",
+                use_container_width=True
+            )
+
+        if st.button("Download Fig 2 (HTML)", use_container_width=True):
+            fig2_html = fig2.to_html()
+            st.download_button(
+                label="⬇️ Save HTML",
+                data=fig2_html,
+                file_name=f"figure2_{datetime.now().strftime('%Y%m%d_%H%M%S')}.html",
+                mime="text/html",
+                use_container_width=True
+            )
+
 # ============================================================================
-# TAB 4: ABOUT
+# TAB 5: BETA FEATURES
 # ============================================================================
 
-with tab4:
+with tab5:
+    st.header("🧪 Beta Features")
+    st.markdown("*Experimental features under development*")
+
+    st.info("These features are currently under development and will be added in future versions.")
+
+    # Feature 1: Self-Consistent Diagnostic
+    with st.expander("🔍 Self-Consistent S-P Diagnostic (Coming Soon)", expanded=False):
+        st.markdown("""
+        **Feature:** Visualize Schrödinger-Poisson self-consistent solution
+
+        This will show:
+        - Gauss law: ns(F) = εF/q
+        - Quantum DOS: ns(F) from subband occupation
+        - Self-consistent intersection point
+
+        **Status:** Planned for M2 (Fang-Howard) model
+        """)
+
+    # Feature 2: Experimental Guidance Mode
+    with st.expander("🎯 Experimental Guidance Mode (Coming Soon)", expanded=False):
+        st.markdown("""
+        **Feature:** Design experiments and get theoretical predictions
+
+        This will provide:
+        - Sample specification input (material, thickness, growth method)
+        - Annealing plan (temperature range, atmosphere)
+        - Predicted measurement trajectories
+        - Experimental recommendations and warnings
+
+        **Status:** Planned
+        """)
+
+    # Feature 3: Uncertainty Analysis
+    with st.expander("📊 Uncertainty Propagation Analysis (Coming Soon)", expanded=False):
+        st.markdown("""
+        **Feature:** Propagate parameter uncertainties to predictions
+
+        This will show:
+        - Error bands on theory curves
+        - Monte Carlo confidence intervals
+        - Sensitivity analysis
+
+        **Status:** Planned
+        """)
+
+    # Feature 4: Material Database
+    with st.expander("📚 Material Database (Coming Soon)", expanded=False):
+        st.markdown("""
+        **Feature:** Pre-configured parameters for common materials
+
+        Will include:
+        - In₂O₃, ZnO, SnO₂, ITO, etc.
+        - Literature values for m*, εᵣ
+        - One-click parameter loading
+
+        **Status:** Planned
+        """)
+
+    # Feature 5: Annealing Animation
+    with st.expander("🎬 Annealing Trajectory Animation (Coming Soon)", expanded=False):
+        st.markdown("""
+        **Feature:** Animated visualization of annealing process
+
+        This will show:
+        - Dynamic evolution of ΔWF and ns with temperature
+        - Trajectory path in parameter space
+        - Time-lapse animation
+
+        **Status:** Planned
+        """)
+
+# ============================================================================
+# TAB 6: ABOUT
+# ============================================================================
+
+with tab6:
     st.markdown("""
     ## About This Tool
 
@@ -482,12 +918,41 @@ with tab4:
     - **M3**: slope = -q·W/(2ε) (exactly half of M1)
     - **M2**: intermediate, field-dependent
 
+    ### New Features (v2.0)
+
+    #### 🔬 Experiment Comparison
+    - Import experimental CSV data (UPS/XPS measurements)
+    - Automatic parameter fitting (W, η optimization)
+    - Residual analysis and goodness-of-fit diagnostics
+    - Theory-experiment overlay plots
+
+    #### 📤 Publication Export
+    - High-quality figure export (SVG/PNG/PDF)
+    - Journal-specific styles (Nature, Science, ACS, Grayscale)
+    - Customizable sizes and fonts
+    - Ready for journal submission
+
+    #### 🧪 Beta Features
+    - Upcoming features in development
+    - Self-consistent diagnostics
+    - Experimental guidance mode
+    - Uncertainty analysis
+
     ### Usage Tips
 
     1. Use the sidebar to adjust parameters
     2. Compare different models using "Add to Compare"
-    3. Export data and figures for publications
-    4. Adsorbates shift ΔWF without changing slope
+    3. **NEW**: Import experimental data for fitting
+    4. **NEW**: Export publication-quality figures
+    5. Adsorbates shift ΔWF without changing slope
+
+    ### Use Case: In₂O₃ Annealing Experiment
+
+    This tool is optimized for analyzing in-situ annealing experiments:
+    - **Material**: In₂O₃ thin films (100 nm typical)
+    - **Experiment**: UHV annealing (25-400°C)
+    - **Measurements**: UPS (work function) + XPS (core level shifts)
+    - **Goal**: Extract η factor and depletion width W
 
     ### References
 
@@ -496,9 +961,10 @@ with tab4:
     - Salvinelli et al., ACS Appl. Mater. Interfaces **10**, 25941 (2018)
 
     ---
-    **Version**: 1.0
-    **Created**: November 2025
-    **Framework**: Python + Streamlit + Plotly
+    **Version**: 2.0
+    **Updated**: November 2025
+    **Framework**: Python + Streamlit + Plotly + Matplotlib
+    **GitHub**: [2DEG-S-P-toy](https://github.com/aaronderek/2DEG-S-P-toy)
     """)
 
 # ============================================================================
