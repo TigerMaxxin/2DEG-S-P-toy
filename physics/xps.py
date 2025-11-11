@@ -110,8 +110,9 @@ def calculate_dipole_shift(N_ads_cm2, mu_debye):
     mu_C_m = mu_debye * DEBYE_TO_CM  # Debye to C·m
 
     # Helmholtz equation: ΔΦdip = -(Nads * μ⊥) / ε₀
-    Delta_Phi_dip_J = -(N_ads * mu_C_m) / EPS0
-    Delta_Phi_dip_eV = J_to_eV(Delta_Phi_dip_J)
+    # Result is in Volts (V), which equals eV for work function shift
+    Delta_Phi_dip_V = -(N_ads * mu_C_m) / EPS0
+    Delta_Phi_dip_eV = Delta_Phi_dip_V  # 1 V = 1 eV for work function
 
     return Delta_Phi_dip_eV
 
@@ -143,7 +144,7 @@ class XPSModel:
     Model for XPS measurements including band bending and adsorbate effects.
     """
 
-    def __init__(self, lambda_nm=1.8, theta_deg=0, N_site_cm2=1e15):
+    def __init__(self, lambda_nm=1.8, theta_deg=0, N_site_cm2=1e14):
         """
         Initialize XPS model.
 
@@ -154,7 +155,7 @@ class XPSModel:
         theta_deg : float
             Detection angle in degrees
         N_site_cm2 : float
-            Surface site density in cm⁻² (default ~1e15 for oxide surfaces)
+            Surface site density in cm⁻² (default 1e14 = 1e18 m⁻² for oxide surfaces)
         """
         self.lambda_nm = lambda_nm
         self.theta_deg = theta_deg
