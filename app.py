@@ -164,12 +164,24 @@ if show_adsorbates:
         help="Perpendicular dipole moment"
     )
 
-    # Calculate dipole shift
-    N_site = 1e15  # Surface site density in cm⁻²
+    # Surface site density
+    N_site_exp = st.sidebar.slider(
+        "N_site (10^x cm⁻²)",
+        min_value=13.0,
+        max_value=15.0,
+        value=14.0,
+        step=0.1,
+        help="Surface site density (5e13 to 1e15 cm⁻²)"
+    )
+    N_site = 10 ** N_site_exp  # Convert from log scale to actual value
     from physics.xps import calculate_dipole_from_coverage
     Delta_Phi_dip = calculate_dipole_from_coverage(coverage, N_site, mu_debye)
 
-    st.sidebar.info(f"ΔΦ_dip = {Delta_Phi_dip:+.3f} eV")
+    # Warning for unusually large dipole shifts
+    if abs(Delta_Phi_dip) > 2.0:
+        st.sidebar.warning(f"⚠️ Dipole shift unusually large: {Delta_Phi_dip:+.3f} eV. Check Debye or N_site units.")
+    else:
+        st.sidebar.info(f"ΔΦ_dip = {Delta_Phi_dip:+.3f} eV")
 else:
     Delta_Phi_dip = 0.0
     coverage = 0.0
