@@ -455,8 +455,8 @@ def create_publication_comparison_figure(
             annotation_text += f"Δ = {diff_pct:.1f}%"
 
         # Text box positioned at left side to avoid overlapping curves
-        props = dict(boxstyle='round', facecolor='rgba(255, 255, 255, 0.95)',
-                    edgecolor='black', alpha=0.98, linewidth=1.5, pad=0.8)
+        props = dict(boxstyle='round', facecolor='white',
+                    edgecolor='black', alpha=0.95, linewidth=1.5, pad=0.8)
         ax.text(0.02, 0.98, annotation_text, transform=ax.transAxes,
                fontsize=11, verticalalignment='top', horizontalalignment='left', bbox=props)
 
