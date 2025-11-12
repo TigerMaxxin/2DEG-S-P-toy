@@ -305,6 +305,19 @@ MIT License - see LICENSE file for details.
 
 ## Version History
 
+- **v2.1.2** (2025-11-12): Experiment comparison critical fixes
+  - 🐛 **Fixed**: Sample data now shows physically reasonable In₂O₃ vacuum annealing behavior
+    - Both ΔWF and ΔE_CL correctly negative (desorption scenario)
+    - Positive correlation with η ≈ 0.85 (previously unphysical negative correlation)
+  - ✨ **New**: Comprehensive physics validation for experimental data
+    - Detects negative correlations (sign convention errors)
+    - Warns about unusual η values or insufficient data range
+  - 🐛 **Fixed**: Publication export Figure 3 now includes theory curve
+    - Blue theory line with proper XPS calculation
+    - Red experimental fit line with statistics
+    - Annotation box with η comparison
+  - See [CHANGELOG.md](CHANGELOG.md) for details
+
 - **v2.1.1** (2025-11-12): UI and visualization bug fixes
   - 🐛 **Fixed**: Comparison plot now shows theoretical curve with η comparison
   - 🐛 **Fixed**: m* uncertainty band visualization now working correctly

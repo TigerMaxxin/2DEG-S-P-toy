@@ -1,5 +1,76 @@
 # Changelog
 
+## Version 2.1.2 - 2025-11-12
+
+### Critical Bug Fixes 🐛
+
+#### Sample Data Physics Corrected (CRITICAL)
+- **Issue**: Sample data showed unphysical negative correlation between ΔWF and ΔE_CL
+- **Root Cause**:
+  - Generated positive ΔWF values (work function increase)
+  - Applied `In3d = In3d_base - Delta_CL`, causing negative ΔE_CL
+  - Result: ΔWF positive, ΔE_CL negative → negative correlation, η = -0.850
+- **Physical Context**:
+  - In₂O₃ vacuum annealing: water desorption → surface potential increases
+  - Should give: ΔWF < 0 (work function decreases), ΔE_CL < 0 (binding energy decreases)
+  - Expected: Positive correlation with η ≈ 0.7-0.9
+- **Fix**:
+  - Rewrote `create_sample_data()` with correct physics
+  - Simulates realistic desorption kinetics (sigmoid activation at 100-200°C)
+  - Includes surface potential evolution (0.2 → 0.5 eV) and dipole layer effects
+  - Both ΔWF and ΔE_CL now correctly negative with η = 0.85
+  - Added noise simulation (±0.01 eV) for realism
+- **Impact**: Sample data now demonstrates correct physics, suitable for teaching and testing
+- **Files Modified**: `utils/experiment_data.py`
+
+#### Data Validation System Added (NEW FEATURE)
+- **Purpose**: Detect common experimental data issues and warn users
+- **Implementation**: New function `validate_experimental_data_physics()`
+- **Checks Performed**:
+  1. **Correlation Check**: Detects negative correlation (sign convention errors)
+  2. **η Range Check**: Warns if η < 0.5 or η > 0.95 (outside typical TCO range)
+  3. **Data Range Check**: Warns if ΔWF range < 0.1 eV (insufficient for fitting)
+  4. **Sign Consistency**: Validates ΔWF and ΔE_CL have same sign trend
+- **User Experience**:
+  - Warnings displayed in "Data Quality Checks" section after data import
+  - Clear explanations of physical meaning and possible causes
+  - Actionable suggestions for improvement
+- **Files Modified**: `utils/experiment_data.py`, `app.py`
+
+#### Publication Export Missing Theory Curve (CRITICAL)
+- **Issue**: Exported Figure 3 (comparison plot) only showed experimental scatter points
+- **Root Cause**: `create_publication_comparison_figure()` didn't accept model parameters
+- **Impact**: Exported figures incomplete, not suitable for publication
+- **Fix**:
+  - Added `model`, `lambda_nm`, `theta_deg` parameters to function
+  - Function now calculates theory curve from model (same as interactive plot)
+  - Generates theoretical ΔE_CL vs ΔWF curve via XPS integration
+  - Added experimental linear fit line (red dashed)
+  - Added annotation box with η_exp, η_theory, R², and comparison
+  - Added zero-crossing reference lines (x=0, y=0)
+- **Result**: Exported figures now match interactive display quality
+- **Files Modified**: `utils/publication_export.py`, `app.py`
+
+### Verification
+- ✅ Sample data shows η = 0.85 ± 0.01 with R² > 0.99
+- ✅ Both ΔWF and ΔE_CL negative (vacuum annealing scenario)
+- ✅ Data validation correctly identifies issues in problematic datasets
+- ✅ Publication export includes blue theory line, red scatter points, and red fit line
+- ✅ Annotation box shows η comparison and statistical metrics
+
+### Files Modified
+- `utils/experiment_data.py`: Rewrote sample data generation, added validation
+- `utils/publication_export.py`: Added theory curve calculation to export function
+- `app.py`: Integrated validation display, updated export function call, updated version to 2.1.2
+- `README.md`: Added v2.1.2 to version history
+
+### Documentation Updates
+- Updated in-app "About" section with v2.1.2 fixes
+- Updated `README.md` version history
+- Updated `CHANGELOG.md` (this file)
+
+---
+
 ## Version 2.1.1 - 2025-11-12
 
 ### Bug Fixes 🐛

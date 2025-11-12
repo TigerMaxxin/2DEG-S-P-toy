@@ -304,7 +304,10 @@ def create_publication_comparison_figure(
     theory_data: Optional[Dict[str, np.ndarray]] = None,
     fit_result: Optional[Dict] = None,
     style_config: Optional[Dict] = None,
-    size: Tuple[float, float] = (7.0, 5.0)
+    size: Tuple[float, float] = (7.0, 5.0),
+    model: Optional[Any] = None,
+    lambda_nm: Optional[float] = None,
+    theta_deg: Optional[float] = None
 ) -> Figure:
     """
     Create publication-quality comparison figure: ΔE_CL vs ΔWF.
@@ -312,27 +315,93 @@ def create_publication_comparison_figure(
     Parameters
     ----------
     exp_data : dict
-        Experimental data
+        Experimental data with 'Delta_WF' and 'Delta_CL'
     theory_data : dict, optional
-        Theory curve data
+        Theory curve data (legacy support)
     fit_result : dict, optional
         Fitting results
     style_config : dict, optional
         Style configuration
     size : tuple
         Figure size in inches
+    model : object, optional
+        Model object (TriangularModel, etc.) to calculate theory curve
+    lambda_nm : float, optional
+        XPS mean free path in nm (needed if model provided)
+    theta_deg : float, optional
+        XPS detection angle in degrees (needed if model provided)
 
     Returns
     -------
     fig : matplotlib.figure.Figure
         Figure object
     """
+    from physics.xps import calculate_core_level_shift
+    from physics.units import nm_to_m
+    from scipy.stats import linregress
+
     if style_config is None:
         style_config = get_journal_style('Default')
 
     fig, ax = plt.subplots(figsize=size)
 
-    # Plot experimental data
+    # ========== 1. Calculate Theory Curve (if model provided) ==========
+    eta_theory = None
+    if model is not None and lambda_nm is not None and theta_deg is not None:
+        # Determine Delta_WF range from experimental data
+        if exp_data is not None and len(exp_data['Delta_WF']) > 0:
+            Delta_WF_min = min(exp_data['Delta_WF']) - 0.05
+            Delta_WF_max = max(exp_data['Delta_WF']) + 0.05
+        else:
+            Delta_WF_min = -0.6
+            Delta_WF_max = 0.0
+
+        # Generate theoretical curve
+        Delta_WF_theory = np.linspace(Delta_WF_min, Delta_WF_max, 100)
+        Delta_CL_theory = []
+
+        for Delta_WF in Delta_WF_theory:
+            # From ΔWF to Phi_s: ΔWF = -Phi_s (ignoring adsorbates)
+            Phi_s_eV = -Delta_WF
+
+            # Skip if Phi_s is too small or negative
+            if Phi_s_eV < 0.01:
+                Delta_CL_theory.append(0)
+                continue
+
+            # Create z array for integration
+            lambda_m = nm_to_m(lambda_nm)
+            z_max = 3 * lambda_m
+            z_array = np.linspace(0, z_max, 500)
+
+            # Get potential profile from model
+            V_z = model.get_potential(Phi_s_eV, z_array)
+
+            # Calculate XPS shift
+            Delta_E_CL, _ = calculate_core_level_shift(
+                V_z, z_array, lambda_nm, theta_deg
+            )
+
+            Delta_CL_theory.append(Delta_E_CL)
+
+        Delta_CL_theory = np.array(Delta_CL_theory)
+
+        # Calculate theoretical η from slope
+        if len(Delta_WF_theory) > 2:
+            eta_theory = np.polyfit(Delta_WF_theory, Delta_CL_theory, 1)[0]
+
+        # Plot theory curve
+        ax.plot(
+            Delta_WF_theory,
+            Delta_CL_theory,
+            color=style_config['colors'][0],
+            linewidth=2.5,
+            linestyle='-',
+            label='Theory',
+            zorder=2
+        )
+
+    # ========== 2. Plot experimental data ==========
     ax.scatter(
         exp_data['Delta_WF'],
         exp_data['Delta_CL'],
@@ -358,8 +427,45 @@ def create_publication_comparison_figure(
             zorder=9
         )
 
-    # Plot theory curve if available
-    if theory_data is not None:
+    # ========== 3. Experimental Linear Fit ==========
+    if len(exp_data['Delta_WF']) >= 3:
+        slope, intercept, r_value, _, std_err = linregress(
+            exp_data['Delta_WF'],
+            exp_data['Delta_CL']
+        )
+
+        # Fit line
+        x_fit = np.array([exp_data['Delta_WF'].min(), exp_data['Delta_WF'].max()])
+        y_fit = slope * x_fit + intercept
+
+        ax.plot(
+            x_fit,
+            y_fit,
+            color='red',
+            linewidth=2.5,
+            linestyle='--',
+            label=f'Exp. fit (η={slope:.3f})',
+            zorder=3
+        )
+
+        # Add annotation with fit statistics
+        annotation_text = f"Experimental Fit:\n"
+        annotation_text += f"η_exp = {slope:.3f} ± {std_err:.3f}\n"
+        annotation_text += f"R² = {r_value**2:.4f}"
+
+        if eta_theory is not None:
+            annotation_text += f"\n\nTheory:\n"
+            annotation_text += f"η_theory = {eta_theory:.3f}\n"
+            annotation_text += f"Difference: {abs(slope-eta_theory)/eta_theory*100:.1f}%"
+
+        # Text box with white background
+        props = dict(boxstyle='round', facecolor='white',
+                    edgecolor='black', alpha=0.9, linewidth=1.5)
+        ax.text(0.02, 0.98, annotation_text, transform=ax.transAxes,
+               fontsize=11, verticalalignment='top', bbox=props)
+
+    # ========== 4. Legacy theory_data support ==========
+    elif theory_data is not None:
         ax.plot(
             theory_data['Delta_WF'],
             theory_data['Delta_CL'],
@@ -370,18 +476,18 @@ def create_publication_comparison_figure(
             zorder=2
         )
 
-    # Plot fit if available
+    # ========== 5. Fitted Curve (from parameter fitting) ==========
     if fit_result is not None and 'theory_Delta_CL' in fit_result:
         # Sort by Delta_WF for smooth line
         sort_idx = np.argsort(exp_data['Delta_WF'])
         ax.plot(
             exp_data['Delta_WF'][sort_idx],
             fit_result['theory_Delta_CL'][sort_idx],
-            color=style_config['colors'][1],
+            color=style_config['colors'][2] if len(style_config['colors']) > 2 else 'green',
             linewidth=2.5,
-            linestyle='--',
-            label=f"Fit (η={fit_result['eta_fit']:.3f}, R²={fit_result['r_squared']:.3f})",
-            zorder=3
+            linestyle=':',
+            label=f"Fitted (η={fit_result['eta_fit']:.3f}, R²={fit_result['r_squared']:.3f})",
+            zorder=4
         )
 
     # Labels
@@ -394,7 +500,12 @@ def create_publication_comparison_figure(
                 linestyle=style_config.get('grid_style', '--'))
 
     # Legend
-    ax.legend(frameon=style_config.get('legend_frame', True), loc='best')
+    ax.legend(frameon=style_config.get('legend_frame', True), loc='lower right',
+             fontsize=11, framealpha=0.9, edgecolor='black')
+
+    # Add zero lines
+    ax.axhline(y=0, color='k', linestyle='-', linewidth=0.5)
+    ax.axvline(x=0, color='k', linestyle='-', linewidth=0.5)
 
     plt.tight_layout()
 
