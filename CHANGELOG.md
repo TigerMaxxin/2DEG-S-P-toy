@@ -1,5 +1,70 @@
 # Changelog
 
+## Version 2.1.5 - 2025-11-12
+
+### Critical Bug Fixes 🐛
+
+#### Potential Energy Profile Direction Corrected (CRITICAL)
+- **Issue**: Theoretical η calculation gave incorrect values (0.29-0.57 instead of expected 0.35-0.55)
+- **Root Cause**:
+  - M1 (Triangular) and M2 (Fang-Howard) models used wrong potential direction
+  - Code: `V(z) = Q × Es × z` (increases from 0 to Φs)
+  - Physical: `V(z) = Q × Φs × (1 - z/W)` (decreases from Φs to 0)
+  - M3 (Parabolic) was correct: `V(z) = Q × Φs × (1 - z/W)²`
+- **Physical Context**:
+  - Potential energy V(z) should be maximum at surface (z=0) and zero at bulk (z=W)
+  - Electron experiences a potential barrier that decreases with depth
+  - XPS samples this potential with exponential weighting w(z) = exp(-z/λ)
+- **Fix**:
+  - M1: Changed to `V(z) = Q × Φs × (1 - z/W)` (triangular profile, correct direction)
+  - M2: Changed to `V(z) = Q × Φs × (1 - z/W_eff)` (self-consistent triangular)
+  - Added detailed comments explaining electric potential vs. potential energy
+- **Verification**:
+  - All models now give V(z=0) = Φs ✓
+  - All models now give V(z=W) ≈ 0 ✓
+  - M1: η ≈ 0.50 (triangular averages to 50% of uniform potential) ✓
+  - M2: η ≈ 0.43 (similar to triangular) ✓
+  - M3: η ≈ 0.37 (parabolic averages to 33% of uniform potential) ✓
+- **Impact**:
+  - Theoretical η now physically reasonable and model-dependent
+  - Users can distinguish between potential models based on experimental data
+  - η values match theoretical expectations for each potential shape
+- **Files Modified**: `models/triangular.py`, `models/fang_howard.py`
+
+### User Interface Improvements 🎨
+
+#### Publication Export Figure Enhancements
+- **Improvements**:
+  - **Annotation Box**: Moved from right to left side to avoid overlapping theory curve
+  - **Transparency**: Increased annotation box transparency (alpha=0.98) for better curve visibility
+  - **Legend Simplification**: Removed redundant experimental fit line (red dashed)
+    - Before: 4 items (Theory, Experiment, Exp. fit, Best fit)
+    - After: 3 items (Theory (initial params), Experimental data, Best fit)
+  - **Label Clarity**:
+    - "Theory" → "Theory (initial params)" (clarifies this uses input W, λ parameters)
+    - "Experiment" → "Experimental data"
+    - "Fitted" → "Best fit" (clearer terminology)
+  - **X-axis Range**: Dynamic adjustment to minimize empty space
+    - Auto-calculates range as [min(ΔWF) - 0.02, max(ΔWF) + 0.02]
+  - **Visual Enhancements**:
+    - Larger scatter markers: 100 → 120 (better visibility)
+    - Thicker lines: 2.5 → 2.8 (theory), 3.0 (best fit)
+    - Best fit now uses solid line (more important than initial theory)
+    - Larger axis labels: 14 → 15 pt
+    - Enhanced legend with shadow and rounded corners
+- **Result**: Cleaner, more professional figures suitable for publication
+- **Files Modified**: `utils/publication_export.py`
+
+### Documentation & Testing 📝
+
+#### Comprehensive Test Suite Added
+- Added `test_eta_theory_debug.py`: Basic η calculation verification
+- Added `test_theory_curve_calculation.py`: Full curve generation simulation
+- Added `test_all_models_eta.py`: Comparison of all three models
+- Added `test_m2_potential_bug.py`: Detailed M2 potential profile analysis
+- Added `test_fix_validation.py`: Comprehensive validation of all fixes
+- All tests confirm physical correctness of η calculations
+
 ## Version 2.1.4 - 2025-11-12
 
 ### Critical Bug Fix 🐛
