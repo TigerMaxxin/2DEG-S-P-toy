@@ -30,7 +30,8 @@ from ui.plots import (
     create_annealing_trajectory_plot
 )
 from utils.experiment_data import (
-    import_experimental_data, get_format_example_text, create_sample_data
+    import_experimental_data, get_format_example_text, create_sample_data,
+    validate_experimental_data_physics
 )
 from utils.fitting import (
     run_parameter_fitting, linear_fit_eta, estimate_initial_parameters
@@ -537,6 +538,14 @@ with tab3:
             lin_fit = linear_fit_eta(exp_data)
             st.metric("Estimated η", f"{lin_fit['eta_exp']:.3f}")
 
+        # Physics validation
+        validation_warnings = validate_experimental_data_physics(exp_data)
+        if validation_warnings:
+            st.markdown("---")
+            st.subheader("⚠️ Data Quality Checks")
+            for warning in validation_warnings:
+                st.warning(warning)
+
         st.markdown("---")
         st.subheader("3. Parameter Fitting")
 
@@ -750,7 +759,10 @@ with tab4:
                         theory_data=None,
                         fit_result=st.session_state.fit_result,
                         style_config=style_config,
-                        size=fig_size
+                        size=fig_size,
+                        model=model,
+                        lambda_nm=lambda_xps,
+                        theta_deg=theta_xps
                     )
 
                     fmt = 'png' if 'PNG' in format_type else ('svg' if 'SVG' in format_type else 'pdf')
@@ -1008,13 +1020,32 @@ with tab6:
     - **m* Uncertainty Band**: Fixed visualization - now properly shows shaded region for m* = 0.30-0.35 m₀
     - **M2 Model UI**: Cleaned up Additional Plots tab - no longer shows empty "Quantum Subband Energy Levels" title for Fang-Howard model
 
+    ### Bug Fixes (v2.1.2)
+
+    #### 🐛 Fixed Experiment Comparison Critical Issues
+    - **Sample Data Physics**: Fixed sample data generation to produce physically reasonable In₂O₃ vacuum annealing data
+      - Both ΔWF and ΔE_CL now correctly show negative values (desorption scenario)
+      - Positive correlation with η ≈ 0.85 (previously showed unphysical negative correlation)
+      - Includes realistic desorption kinetics with temperature
+    - **Data Validation**: Added comprehensive physics validation for experimental data
+      - Detects negative correlations (sign convention errors)
+      - Warns about unusual η values (<0.5 or >0.95)
+      - Checks for insufficient data range
+      - Validates sign consistency between ΔWF and ΔE_CL
+    - **Publication Export**: Fixed Figure 3 (comparison plot) to include theory curve
+      - Now properly displays blue theory line alongside experimental data
+      - Shows red experimental fit line with η and R² values
+      - Includes annotation box with fit statistics and theory comparison
+      - Added zero-crossing reference lines
+
     ### Usage Tips
 
     1. Use the sidebar to adjust parameters
     2. Compare different models using "Add to Compare"
-    3. **NEW**: Import experimental data for fitting
-    4. **NEW**: Export publication-quality figures
+    3. **NEW**: Import experimental data for fitting with automatic validation
+    4. **NEW**: Export publication-quality figures with theory curves
     5. Adsorbates shift ΔWF without changing slope
+    6. **NEW**: Physics validation warns about data quality issues
 
     ### Use Case: In₂O₃ Annealing Experiment
 
@@ -1023,6 +1054,7 @@ with tab6:
     - **Experiment**: UHV annealing (25-400°C)
     - **Measurements**: UPS (work function) + XPS (core level shifts)
     - **Goal**: Extract η factor and depletion width W
+    - **Expected**: ΔWF < 0, ΔE_CL < 0, η ≈ 0.7-0.9
 
     ### References
 
@@ -1031,7 +1063,7 @@ with tab6:
     - Salvinelli et al., ACS Appl. Mater. Interfaces **10**, 25941 (2018)
 
     ---
-    **Version**: 2.1.1
+    **Version**: 2.1.2
     **Updated**: November 2025
     **Framework**: Python + Streamlit + Plotly + Matplotlib
     **GitHub**: [2DEG-S-P-toy](https://github.com/aaronderek/2DEG-S-P-toy)
