@@ -44,10 +44,11 @@ print(f"Expected ΔΦ_dip ≈ -0.283 eV")
 # Initialize model
 model = TriangularModel(m_star_ratio, epsilon_r, W_nm)
 
-# Generate ns range (matching app.py line 267)
-ns_range = np.linspace(1e12, 2e13, 100)  # m⁻²
+# Generate ns range (matching updated app.py)
+# Typical 2DEG density range: 0.2 to 2.0 × 10¹³ cm⁻²
+ns_range = np.linspace(2e16, 2e17, 100)  # m⁻² (0.2 to 2.0 × 10¹³ cm⁻²)
 
-# Calculate Delta_WF for each ns (matching app.py line 270)
+# Calculate Delta_WF for each ns
 Delta_WF_array = model.calculate_Delta_WF(ns_range)
 
 # Calculate Delta_WF with adsorbates (matching app.py line 283)
@@ -57,8 +58,9 @@ print(f"\n" + "=" * 70)
 print("Results for Figure 2: ΔWF vs nₛ")
 print("=" * 70)
 
-# Convert ns to display units (10¹³ cm⁻²)
-ns_display = ns_range * 1e-4 / 1e13  # m⁻² to 10¹³ cm⁻²
+# Convert ns to display units (10¹³ cm⁻²) using the fixed conversion
+from physics.units import ns_to_display
+ns_display = ns_to_display(ns_range)
 
 # Print first, middle, and last points
 indices = [0, 49, 99]

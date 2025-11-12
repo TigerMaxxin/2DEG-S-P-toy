@@ -264,7 +264,9 @@ with tab1:
     }]
 
     # Generate curve data for Figure 2: Delta_WF vs ns
-    ns_range = np.linspace(1e12, 2e13, 100)  # m⁻²
+    # Typical 2DEG density range: 0.2 to 2.0 × 10¹³ cm⁻²
+    # Converting to m⁻²: multiply by 1e13 * 1e4 = 1e17
+    ns_range = np.linspace(2e16, 2e17, 100)  # m⁻² (0.2 to 2.0 × 10¹³ cm⁻²)
 
     # Calculate Delta_WF for each ns
     Delta_WF_array = model.calculate_Delta_WF(ns_range)
@@ -950,6 +952,14 @@ with tab6:
     - Experimental guidance mode
     - Uncertainty analysis
 
+    ### Bug Fixes (v2.1)
+
+    #### 🐛 Fixed Critical Issues
+    - **Unit Conversion Bug**: Corrected density conversion in `ns_to_display()` function
+    - **ns Range Fix**: Updated Figure 2 density range to realistic 0.2-2.0 × 10¹³ cm⁻²
+    - **Adsorbate Validation**: Added input validation and warnings for unusual dipole shifts
+    - **Plot Sanity Checks**: Added guardrail checks to catch unit conversion errors before plotting
+
     ### Usage Tips
 
     1. Use the sidebar to adjust parameters
@@ -973,7 +983,7 @@ with tab6:
     - Salvinelli et al., ACS Appl. Mater. Interfaces **10**, 25941 (2018)
 
     ---
-    **Version**: 2.0
+    **Version**: 2.1
     **Updated**: November 2025
     **Framework**: Python + Streamlit + Plotly + Matplotlib
     **GitHub**: [2DEG-S-P-toy](https://github.com/aaronderek/2DEG-S-P-toy)

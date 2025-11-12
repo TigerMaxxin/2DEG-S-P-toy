@@ -305,6 +305,14 @@ MIT License - see LICENSE file for details.
 
 ## Version History
 
+- **v2.1.0** (2025-11-12): Critical bug fix release
+  - 🐛 Fixed unit conversion error in density display
+  - 🐛 Corrected Figure 2 ns range (was 10⁸× too small!)
+  - ✅ Added input validation for adsorbate parameters
+  - ✅ Added plot sanity checks to catch unit errors
+  - ✅ All validation tests now pass
+  - See [CHANGELOG.md](CHANGELOG.md) for details
+
 - **v2.0.0** (2025-11-11): Major feature update
   - ✨ Experiment comparison with CSV data import
   - 🎯 Automatic parameter fitting (W, η optimization)

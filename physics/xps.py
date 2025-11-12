@@ -135,8 +135,28 @@ def calculate_dipole_from_coverage(coverage, N_site_cm2, mu_debye):
     Delta_Phi_dip : float
         Work function shift in eV
     """
+    # Clamp coverage to valid range
+    coverage = np.clip(coverage, 0.0, 1.0)
+
+    # Validate N_site_cm2 is reasonable (5e13 to 5e15 cm⁻² typical for surfaces)
+    if N_site_cm2 < 1e13 or N_site_cm2 > 1e16:
+        import warnings
+        warnings.warn(f"N_site = {N_site_cm2:.2e} cm⁻² is outside typical range (1e13-1e16 cm⁻²)")
+
+    # Validate mu_debye is reasonable (0 to 5 Debye typical)
+    if mu_debye < 0 or mu_debye > 10:
+        import warnings
+        warnings.warn(f"μ⊥ = {mu_debye:.2f} Debye is outside typical range (0-10 Debye)")
+
     N_ads_cm2 = coverage * N_site_cm2
-    return calculate_dipole_shift(N_ads_cm2, mu_debye)
+    Delta_Phi_dip = calculate_dipole_shift(N_ads_cm2, mu_debye)
+
+    # Sanity check: Warn if dipole shift is unusually large
+    if abs(Delta_Phi_dip) > 2.0:
+        import warnings
+        warnings.warn(f"ΔΦ_dip = {Delta_Phi_dip:+.3f} eV is unusually large (|ΔΦ| > 2 eV). Check input units.")
+
+    return Delta_Phi_dip
 
 
 class XPSModel:

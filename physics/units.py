@@ -55,8 +55,10 @@ def ns_to_display(ns_m2):
     float or array
         Sheet density in units of 10¹³ cm⁻²
     """
-    # Note: For densities (m⁻²), 1 m⁻² = 1e-4 cm⁻² (inverse of area conversion)
-    ns_cm2 = ns_m2 * CM2_TO_M2  # Convert to cm⁻²
+    # For densities (counts per area), 1 m⁻² = 10^-4 cm⁻²
+    # because if 1 object occupies 1 m², it occupies 10^4 cm²,
+    # so the density is 1/(10^4 cm²) = 10^-4 cm⁻²
+    ns_cm2 = ns_m2 * CM2_TO_M2  # Convert to cm⁻² (multiply by 1e-4)
     return ns_cm2 / 1e13  # Convert to 10¹³ cm⁻²
 
 
@@ -75,7 +77,7 @@ def ns_from_display(ns_display):
         Sheet density in m⁻²
     """
     ns_cm2 = ns_display * 1e13  # Convert to cm⁻²
-    return ns_cm2 * M2_TO_CM2  # Convert to m⁻² (density conversion is inverse)
+    return ns_cm2 * M2_TO_CM2  # Convert to m⁻² (multiply by 1e4)
 
 
 def debye_to_C_m(dipole_debye):
