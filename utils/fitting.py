@@ -41,10 +41,13 @@ def calculate_theory_Delta_CL(
         Theoretical core level shifts (eV)
     """
     # For simplified fitting, we use the relation:
-    # Delta_CL ≈ eta * Delta_WF (approximately, ignoring dipole effects)
-    # This is valid because Delta_E_CL = eta * Phi_s and Delta_WF = -Phi_s
+    # Delta_CL = eta * Delta_WF
+    # Both Delta_CL and Delta_WF follow the same sign convention:
+    # - Vacuum annealing (desorption): Both negative
+    # - Oxygen annealing (adsorption): Both positive
+    # The relationship is direct proportional, not inverse
 
-    Delta_CL_theory = -eta * Delta_WF_exp
+    Delta_CL_theory = eta * Delta_WF_exp
 
     return Delta_CL_theory
 
@@ -261,7 +264,7 @@ def linear_fit_eta(exp_data: Dict[str, np.ndarray]) -> Dict[str, float]:
     """
     Perform linear regression to extract eta from experimental data.
 
-    Fits: Delta_CL = -eta * Delta_WF
+    Fits: Delta_CL = eta * Delta_WF
 
     Parameters
     ----------
@@ -279,8 +282,8 @@ def linear_fit_eta(exp_data: Dict[str, np.ndarray]) -> Dict[str, float]:
         exp_data['Delta_CL']
     )
 
-    # eta is the negative of the slope (because Delta_CL = -eta * Delta_WF)
-    eta_exp = -slope
+    # eta is the slope (because Delta_CL = eta * Delta_WF)
+    eta_exp = slope
 
     return {
         'eta_exp': eta_exp,

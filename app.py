@@ -1038,6 +1038,14 @@ with tab6:
       - Includes annotation box with fit statistics and theory comparison
       - Added zero-crossing reference lines
 
+    ### Bug Fixes (v2.1.4)
+
+    #### 🐛 Fixed Parameter Fitting Critical Issue
+    - **Parameter Fitting Curve Direction**: Fixed inverted fitted curves in "Experiment Comparison" tab
+      - Fitted curves now correctly match the trend of experimental data
+      - Corrected sign convention: `Delta_CL = eta * Delta_WF` (direct proportional, not inverse)
+      - Test verification: η = 0.860 (expected ~0.85), R² = 0.9909, trends match ✓
+
     ### Usage Tips
 
     1. Use the sidebar to adjust parameters

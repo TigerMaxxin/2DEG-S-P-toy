@@ -1,5 +1,30 @@
 # Changelog
 
+## Version 2.1.4 - 2025-11-12
+
+### Critical Bug Fix 🐛
+
+#### Parameter Fitting Curve Direction Corrected (CRITICAL)
+- **Issue**: Parameter fitting output curve showed opposite trend compared to sample data and theory
+- **Root Cause**:
+  - Incorrect sign in `calculate_theory_Delta_CL()`: used `-eta * Delta_WF` instead of `eta * Delta_WF`
+  - Also incorrect sign extraction in `linear_fit_eta()`: used `eta_exp = -slope` instead of `eta_exp = slope`
+  - This caused fitted curves to be inverted (positive when should be negative, and vice versa)
+- **Physical Context**:
+  - Correct relationship: `Delta_CL = eta * Delta_WF` (direct proportional)
+  - Both quantities follow same sign convention (both negative in vacuum annealing, both positive in oxidation)
+  - Previous code incorrectly assumed inverse relationship
+- **Fix**:
+  - Changed `Delta_CL_theory = -eta * Delta_WF_exp` → `Delta_CL_theory = eta * Delta_WF_exp`
+  - Changed `eta_exp = -slope` → `eta_exp = slope`
+  - Updated function docstrings to clarify correct relationship
+- **Verification**:
+  - Test with sample data: η = 0.860 (expected ~0.85) ✓
+  - Correlation with experiment: R² = 0.9909 ✓
+  - Curve trends now match correctly ✓
+- **Impact**: Parameter fitting now produces physically correct curves that match experimental data
+- **Files Modified**: `utils/fitting.py`
+
 ## Version 2.1.2 - 2025-11-12
 
 ### Critical Bug Fixes 🐛
