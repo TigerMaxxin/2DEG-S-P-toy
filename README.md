@@ -305,6 +305,13 @@ MIT License - see LICENSE file for details.
 
 ## Version History
 
+- **v2.1.1** (2025-11-12): UI and visualization bug fixes
+  - 🐛 **Fixed**: Comparison plot now shows theoretical curve with η comparison
+  - 🐛 **Fixed**: m* uncertainty band visualization now working correctly
+  - 🐛 **Fixed**: M2 model no longer shows empty subband levels title
+  - ✨ Enhanced M2 Additional Plots with b, W_eff, ⟨z⟩ parameters
+  - See [CHANGELOG.md](CHANGELOG.md) for details
+
 - **v2.1.0** (2025-11-12): Critical bug fix release
   - 🐛 Fixed unit conversion error in density display
   - 🐛 Corrected Figure 2 ns range (was 10⁸× too small!)
