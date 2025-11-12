@@ -105,6 +105,14 @@ def create_Delta_WF_vs_ns_plot(curves_data, title="Work Function Change vs Sheet
         # Convert ns to display units
         ns_display = ns_to_display(ns)
 
+        # Sanity checks to catch unit conversion errors
+        if np.any(np.abs(Delta_WF) > 5.0):
+            import warnings
+            warnings.warn(f"ΔWF values exceed ±5 eV, possible unit error in curve '{name}'")
+        if np.any(ns_display < 1e-3) or np.any(ns_display > 1e3):
+            import warnings
+            warnings.warn(f"nₛ display values outside plausible range (0.001-1000 × 10¹³ cm⁻²) in curve '{name}'")
+
         # Use different line styles for with/without adsorbates
         line_style = 'dash' if with_ads else 'solid'
 

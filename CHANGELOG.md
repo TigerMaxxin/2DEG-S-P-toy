@@ -1,5 +1,59 @@
 # Changelog
 
+## Version 2.1 - 2025-11-12
+
+### Critical Bug Fixes 🐛
+
+#### Unit Conversion Bug Fixed
+- **Issue**: `ns_to_display()` function in `physics/units.py` had incorrect density conversion
+- **Root Cause**: Used `CM2_TO_M2` (area conversion) instead of inverse for density conversion
+- **Impact**: Sheet density displayed values were off by factor of 10⁸
+- **Fix**: Corrected to use proper density conversion (1 m⁻² = 10⁻⁴ cm⁻², inverse of area)
+- **Files Modified**: `physics/units.py`
+
+#### ns Range Correction in Figure 2
+- **Issue**: Figure 2 (ΔWF vs nₛ) used incorrect range `np.linspace(1e12, 2e13, 100)` m⁻²
+- **Problem**: This corresponds to 0.00001-0.0002 × 10¹³ cm⁻² (far too small!)
+- **Expected**: Typical 2DEG density range should be 0.2-2.0 × 10¹³ cm⁻²
+- **Fix**: Updated to `np.linspace(2e16, 2e17, 100)` m⁻² (= 0.2-2.0 × 10¹³ cm⁻²)
+- **Impact**: Curves now display proper slopes instead of appearing nearly horizontal
+- **Files Modified**: `app.py` line 267-269
+
+#### Adsorbate Input Validation
+- **Added**: Input validation in `calculate_dipole_from_coverage()`
+  - Clamps coverage θ to [0, 1] range
+  - Warns if N_site outside typical range (10¹³-10¹⁶ cm⁻²)
+  - Warns if μ⊥ outside typical range (0-10 Debye)
+  - Warns if |ΔΦ_dip| > 2 eV (unusually large)
+- **Purpose**: Catch unit conversion errors before they corrupt plots
+- **Files Modified**: `physics/xps.py`
+
+#### Plot Sanity Checks
+- **Added**: Guardrail checks in `create_Delta_WF_vs_ns_plot()`
+  - Warns if |ΔWF| > 5 eV (likely unit error)
+  - Warns if nₛ display values outside 0.001-1000 × 10¹³ cm⁻² range
+- **Purpose**: Prevent nonsensical plots from reaching user
+- **Files Modified**: `ui/plots.py`
+
+### Verification
+- **Test Suite**: `test_adsorbate_bug.py` now passes all checks
+  - ✅ nₛ range: 0.2 to 2.0 × 10¹³ cm⁻²
+  - ✅ ΔΦ_dip: -0.283 eV (expected value)
+  - ✅ Slope: -0.603 eV/(10¹³ cm⁻²) for M1 with εᵣ=9, W=3nm
+  - ✅ Parallel curves: "with ads" and "no ads" have identical slopes
+  - ✅ Vertical shift: Exactly equals ΔΦ_dip
+
+### Files Modified
+- `physics/units.py`: Fixed density conversion logic
+- `physics/xps.py`: Added input validation and warnings
+- `ui/plots.py`: Added sanity checks for plot data
+- `app.py`: Updated ns_range and version to 2.1
+
+### Documentation Updates
+- Updated in-app "About" section with v2.1 bug fix summary
+- Updated `CHANGELOG.md` (this file)
+- Updated `README.md` with v2.1 information
+
 ## Version 2.0 - 2025-11-11
 
 ### Major New Features
