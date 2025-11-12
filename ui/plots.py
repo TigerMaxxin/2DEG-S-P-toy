@@ -8,7 +8,8 @@ from plotly.subplots import make_subplots
 from physics.units import ns_to_display
 
 
-def create_ns_vs_Phi_s_plot(curves_data, title="Sheet Density vs Surface Potential"):
+def create_ns_vs_Phi_s_plot(curves_data, title="Sheet Density vs Surface Potential",
+                            show_uncertainty=False, model_obj=None, m_star_range=(0.30, 0.35)):
     """
     Create Figure 1: ns vs Φs plot.
 
@@ -22,15 +23,23 @@ def create_ns_vs_Phi_s_plot(curves_data, title="Sheet Density vs Surface Potenti
         - 'color': optional color
     title : str
         Plot title
+    show_uncertainty : bool
+        If True, show m* uncertainty band
+    model_obj : object
+        Model object to calculate uncertainty (needed if show_uncertainty=True)
+    m_star_range : tuple
+        Range of m*/m0 ratios for uncertainty (default: (0.30, 0.35))
 
     Returns
     -------
     fig : plotly.graph_objects.Figure
         Plotly figure object
     """
+    from physics.constants import M0
+
     fig = go.Figure()
 
-    for curve in curves_data:
+    for i, curve in enumerate(curves_data):
         Phi_s = curve['Phi_s']
         ns = curve['ns']
         name = curve['name']
@@ -38,6 +47,39 @@ def create_ns_vs_Phi_s_plot(curves_data, title="Sheet Density vs Surface Potenti
 
         # Convert ns to display units (10¹³ cm⁻²)
         ns_display = ns_to_display(ns)
+
+        # Add uncertainty band if requested (only for first curve)
+        if show_uncertainty and i == 0 and model_obj is not None:
+            from models import TriangularModel, FangHowardModel, ParabolicModel
+
+            # Get model class and parameters
+            model_class = type(model_obj)
+            epsilon_r = model_obj.epsilon_r
+            W_nm = getattr(model_obj, 'W_nm', None)
+            if W_nm is None:
+                W_nm = getattr(model_obj, 'W_initial', 3.0) * 1e9  # Convert to nm
+
+            # Calculate bounds
+            model_low = model_class(m_star_range[0] * M0, epsilon_r, W_nm)
+            model_high = model_class(m_star_range[1] * M0, epsilon_r, W_nm)
+
+            ns_low = model_low.calculate_ns(Phi_s)
+            ns_high = model_high.calculate_ns(Phi_s)
+
+            ns_low_display = ns_to_display(ns_low)
+            ns_high_display = ns_to_display(ns_high)
+
+            # Add filled area
+            fig.add_trace(go.Scatter(
+                x=np.concatenate([Phi_s, Phi_s[::-1]]),
+                y=np.concatenate([ns_low_display, ns_high_display[::-1]]),
+                fill='toself',
+                fillcolor='rgba(100, 150, 250, 0.2)',
+                line=dict(width=0),
+                showlegend=True,
+                name=f'm* uncertainty ({m_star_range[0]:.2f}-{m_star_range[1]:.2f} m₀)',
+                hoverinfo='skip'
+            ))
 
         fig.add_trace(go.Scatter(
             x=Phi_s,
@@ -72,7 +114,8 @@ def create_ns_vs_Phi_s_plot(curves_data, title="Sheet Density vs Surface Potenti
     return fig
 
 
-def create_Delta_WF_vs_ns_plot(curves_data, title="Work Function Change vs Sheet Density"):
+def create_Delta_WF_vs_ns_plot(curves_data, title="Work Function Change vs Sheet Density",
+                               show_uncertainty=False, model_obj=None, m_star_range=(0.30, 0.35)):
     """
     Create Figure 2: ΔWF vs ns plot.
 
@@ -87,15 +130,23 @@ def create_Delta_WF_vs_ns_plot(curves_data, title="Work Function Change vs Sheet
         - 'color': optional color
     title : str
         Plot title
+    show_uncertainty : bool
+        If True, show m* uncertainty band
+    model_obj : object
+        Model object to calculate uncertainty (needed if show_uncertainty=True)
+    m_star_range : tuple
+        Range of m*/m0 ratios for uncertainty (default: (0.30, 0.35))
 
     Returns
     -------
     fig : plotly.graph_objects.Figure
         Plotly figure object
     """
+    from physics.constants import M0
+
     fig = go.Figure()
 
-    for curve in curves_data:
+    for i, curve in enumerate(curves_data):
         ns = curve['ns']
         Delta_WF = curve['Delta_WF']
         name = curve['name']
@@ -112,6 +163,36 @@ def create_Delta_WF_vs_ns_plot(curves_data, title="Work Function Change vs Sheet
         if np.any(ns_display < 1e-3) or np.any(ns_display > 1e3):
             import warnings
             warnings.warn(f"nₛ display values outside plausible range (0.001-1000 × 10¹³ cm⁻²) in curve '{name}'")
+
+        # Add uncertainty band if requested (only for first curve without adsorbates)
+        if show_uncertainty and i == 0 and not with_ads and model_obj is not None:
+            from models import TriangularModel, FangHowardModel, ParabolicModel
+
+            # Get model class and parameters
+            model_class = type(model_obj)
+            epsilon_r = model_obj.epsilon_r
+            W_nm = getattr(model_obj, 'W_nm', None)
+            if W_nm is None:
+                W_nm = getattr(model_obj, 'W_initial', 3.0) * 1e9  # Convert to nm
+
+            # Calculate bounds
+            model_low = model_class(m_star_range[0] * M0, epsilon_r, W_nm)
+            model_high = model_class(m_star_range[1] * M0, epsilon_r, W_nm)
+
+            Delta_WF_low = model_low.calculate_Delta_WF(ns)
+            Delta_WF_high = model_high.calculate_Delta_WF(ns)
+
+            # Add filled area
+            fig.add_trace(go.Scatter(
+                x=np.concatenate([ns_display, ns_display[::-1]]),
+                y=np.concatenate([Delta_WF_low, Delta_WF_high[::-1]]),
+                fill='toself',
+                fillcolor='rgba(100, 150, 250, 0.2)',
+                line=dict(width=0),
+                showlegend=True,
+                name=f'm* uncertainty ({m_star_range[0]:.2f}-{m_star_range[1]:.2f} m₀)',
+                hoverinfo='skip'
+            ))
 
         # Use different line styles for with/without adsorbates
         line_style = 'dash' if with_ads else 'solid'
@@ -380,6 +461,9 @@ def create_comparison_CL_vs_WF_plot(
     exp_data,
     theory_data=None,
     fit_result=None,
+    model=None,
+    lambda_nm=None,
+    theta_deg=None,
     title="Core Level Shift vs Work Function Change"
 ):
     """
@@ -393,6 +477,13 @@ def create_comparison_CL_vs_WF_plot(
         Theory data with 'Delta_WF' and 'Delta_CL'
     fit_result : dict, optional
         Fitting results
+    model : object, optional
+        Model object (TriangularModel, FangHowardModel, or ParabolicModel)
+        to calculate theory curve
+    lambda_nm : float, optional
+        XPS mean free path in nm (needed if model is provided)
+    theta_deg : float, optional
+        XPS detection angle in degrees (needed if model is provided)
     title : str
         Plot title
 
@@ -401,10 +492,68 @@ def create_comparison_CL_vs_WF_plot(
     fig : plotly.graph_objects.Figure
         Plotly figure object
     """
+    from physics.xps import calculate_core_level_shift
+    from physics.units import nm_to_m
+
     fig = go.Figure()
 
-    # Experimental data
-    if exp_data is not None:
+    # ========== 1. Calculate Theory Curve (if model provided) ==========
+    eta_theory = None
+    if model is not None and lambda_nm is not None and theta_deg is not None:
+        # Determine Delta_WF range from experimental data
+        if exp_data is not None and len(exp_data['Delta_WF']) > 0:
+            Delta_WF_min = min(exp_data['Delta_WF']) - 0.05
+            Delta_WF_max = max(exp_data['Delta_WF']) + 0.05
+        else:
+            Delta_WF_min = -0.6
+            Delta_WF_max = 0.0
+
+        # Generate theoretical curve
+        Delta_WF_theory = np.linspace(Delta_WF_min, Delta_WF_max, 100)
+        Delta_CL_theory = []
+
+        for Delta_WF in Delta_WF_theory:
+            # From ΔWF to Phi_s: ΔWF = -Phi_s (ignoring adsorbates)
+            Phi_s_eV = -Delta_WF
+
+            # Skip if Phi_s is too small or negative
+            if Phi_s_eV < 0.01:
+                Delta_CL_theory.append(0)
+                continue
+
+            # Create z array for integration
+            lambda_m = nm_to_m(lambda_nm)
+            z_max = 3 * lambda_m
+            z_array = np.linspace(0, z_max, 500)
+
+            # Get potential profile from model
+            V_z = model.get_potential(Phi_s_eV, z_array)
+
+            # Calculate XPS shift
+            Delta_E_CL, _ = calculate_core_level_shift(
+                V_z, z_array, lambda_nm, theta_deg
+            )
+
+            Delta_CL_theory.append(Delta_E_CL)
+
+        Delta_CL_theory = np.array(Delta_CL_theory)
+
+        # Calculate theoretical η from slope
+        if len(Delta_WF_theory) > 2:
+            eta_theory = np.polyfit(Delta_WF_theory, Delta_CL_theory, 1)[0]
+
+        # Plot theory curve
+        fig.add_trace(go.Scatter(
+            x=Delta_WF_theory,
+            y=Delta_CL_theory,
+            mode='lines',
+            name='Theory',
+            line=dict(color='blue', width=3),
+            hovertemplate='ΔWF: %{x:.3f} eV<br>ΔE_CL: %{y:.3f} eV (theory)<extra></extra>'
+        ))
+
+    # ========== 2. Experimental Data ==========
+    if exp_data is not None and len(exp_data['Delta_WF']) > 0:
         fig.add_trace(go.Scatter(
             x=exp_data['Delta_WF'],
             y=exp_data['Delta_CL'],
@@ -412,11 +561,50 @@ def create_comparison_CL_vs_WF_plot(
             name='Experiment',
             marker=dict(size=12, color='red', symbol='circle',
                        line=dict(width=1.5, color='black')),
-            hovertemplate='ΔWF: %{x:.3f} eV<br>ΔE_CL: %{y:.3f} eV<extra></extra>'
+            hovertemplate='ΔWF: %{x:.3f} eV<br>ΔE_CL: %{y:.3f} eV (exp)<extra></extra>'
         ))
 
-    # Theory curve
-    if theory_data is not None:
+        # ========== 3. Experimental Linear Fit ==========
+        if len(exp_data['Delta_WF']) >= 3:
+            from scipy.stats import linregress
+
+            slope, intercept, r_value, _, std_err = linregress(
+                exp_data['Delta_WF'],
+                exp_data['Delta_CL']
+            )
+
+            # Fit line
+            x_fit = np.array([exp_data['Delta_WF'].min(), exp_data['Delta_WF'].max()])
+            y_fit = slope * x_fit + intercept
+
+            fig.add_trace(go.Scatter(
+                x=x_fit,
+                y=y_fit,
+                mode='lines',
+                name=f'Exp. fit (η={slope:.3f})',
+                line=dict(color='red', width=2, dash='dash'),
+                hovertemplate=f'Linear fit<br>η={slope:.3f}<br>R²={r_value**2:.4f}<extra></extra>'
+            ))
+
+            # Add annotation with fit statistics
+            annotation_text = f"<b>Experimental Fit:</b><br>η_exp = {slope:.3f} ± {std_err:.3f}<br>R² = {r_value**2:.4f}"
+            if eta_theory is not None:
+                annotation_text += f"<br><br><b>Theory:</b><br>η_theory = {eta_theory:.3f}<br>Difference: {abs(slope-eta_theory)/eta_theory*100:.1f}%"
+
+            fig.add_annotation(
+                text=annotation_text,
+                xref="paper", yref="paper",
+                x=0.02, y=0.98,
+                xanchor='left', yanchor='top',
+                showarrow=False,
+                font=dict(size=11),
+                bgcolor="rgba(255,255,255,0.9)",
+                bordercolor="black",
+                borderwidth=1
+            )
+
+    # ========== 4. Legacy theory_data support ==========
+    elif theory_data is not None:
         fig.add_trace(go.Scatter(
             x=theory_data['Delta_WF'],
             y=theory_data['Delta_CL'],
@@ -426,8 +614,8 @@ def create_comparison_CL_vs_WF_plot(
             hovertemplate='ΔWF: %{x:.3f} eV<br>ΔE_CL: %{y:.3f} eV<extra></extra>'
         ))
 
-    # Fitted curve
-    if fit_result is not None and 'theory_Delta_CL' in fit_result:
+    # ========== 5. Fitted Curve (from parameter fitting) ==========
+    if fit_result is not None and 'theory_Delta_CL' in fit_result and exp_data is not None:
         # Sort for smooth line
         sort_idx = np.argsort(exp_data['Delta_WF'])
         fig.add_trace(go.Scatter(

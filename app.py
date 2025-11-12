@@ -324,7 +324,7 @@ with tab1:
 
     with col1:
         st.subheader("Figure 1: Sheet Density vs Surface Potential")
-        fig1 = create_ns_vs_Phi_s_plot(curves_fig1)
+        fig1 = create_ns_vs_Phi_s_plot(curves_fig1, show_uncertainty=show_uncertainty, model_obj=model)
         st.plotly_chart(fig1, use_container_width=True)
 
         # Display current value
@@ -333,7 +333,7 @@ with tab1:
 
     with col2:
         st.subheader("Figure 2: Work Function Change vs Sheet Density")
-        fig2 = create_Delta_WF_vs_ns_plot(curves_fig2)
+        fig2 = create_Delta_WF_vs_ns_plot(curves_fig2, show_uncertainty=show_uncertainty, model_obj=model)
         st.plotly_chart(fig2, use_container_width=True)
 
         # Display current value
@@ -389,14 +389,31 @@ with tab2:
     # Electron density for M2
     if show_n_z and model_type == "M2-Fang-Howard":
         st.markdown("### Electron Density Distribution n(z)")
+        st.info("""
+        **M2 Fang-Howard Model:**
+        Variational approximation using single effective wavefunction.
+        n(z) is calculated from |ψ(z)|² = (b³/2) z² exp(-bz).
+        """)
         n_z = model.get_electron_density(Phi_s, z_m_array)
         fig_n = create_electron_density_plot(z_nm_array, n_z)
         st.plotly_chart(fig_n, use_container_width=True)
 
-    # Subband energies
+        # Display key parameters for M2
+        Es, W_eff, _ = model.solve_self_consistent(Phi_s)
+        b_M2 = model.calculate_b_parameter(Es)
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("Variational parameter b", f"{b_M2*1e-9:.2f} nm⁻¹")
+        with col2:
+            st.metric("Effective width W_eff", f"{W_eff*1e9:.2f} nm")
+        with col3:
+            st.metric("Average depth ⟨z⟩", f"{3/b_M2*1e9:.2f} nm")
+
+    # Subband energies (only for M1 and M3)
     if show_subbands:
-        st.markdown("### Quantum Subband Energy Levels")
+        # Only show if model has subband methods (M1 and M3)
         if hasattr(model, 'get_subband_energies'):
+            st.markdown("### Quantum Subband Energy Levels")
             energies = model.get_subband_energies(Phi_s, n_levels=3)
             df_energies = pd.DataFrame({
                 'Level': ['E₁', 'E₂', 'E₃'],
@@ -404,12 +421,28 @@ with tab2:
             })
             st.table(df_energies)
         elif hasattr(model, 'get_harmonic_levels'):
+            st.markdown("### Quantum Subband Energy Levels")
             energies = model.get_harmonic_levels(Phi_s, n_levels=3)
             df_energies = pd.DataFrame({
                 'Level': ['E₀', 'E₁', 'E₂'],
                 'Energy (eV)': energies
             })
             st.table(df_energies)
+        elif model_type == "M2-Fang-Howard":
+            # Show explanation for M2
+            st.info("""
+            **ℹ️ Why no subband levels for M2?**
+
+            The Fang-Howard model is a **variational approximation** that provides:
+            - ✅ An effective single wavefunction ψ(z)
+            - ✅ Electron density distribution n(z) = ns·|ψ(z)|²
+            - ✅ Ground state energy (first subband approximation)
+
+            It does **not** calculate discrete subband levels (E₀, E₁, E₂...)
+            because it's not solving the full Schrödinger eigenvalue problem.
+
+            👉 For multi-subband analysis, use **M1 (Triangular)** or **M3 (Parabolic)**.
+            """)
 
 # ============================================================================
 # TAB 3: EXPERIMENT COMPARISON
@@ -570,7 +603,10 @@ with tab3:
         fig_comparison = create_comparison_CL_vs_WF_plot(
             exp_data=exp_data,
             theory_data=None,
-            fit_result=st.session_state.fit_result
+            fit_result=st.session_state.fit_result,
+            model=model,
+            lambda_nm=lambda_xps,
+            theta_deg=theta_xps
         )
         st.plotly_chart(fig_comparison, use_container_width=True)
 
@@ -960,6 +996,13 @@ with tab6:
     - **Adsorbate Validation**: Added input validation and warnings for unusual dipole shifts
     - **Plot Sanity Checks**: Added guardrail checks to catch unit conversion errors before plotting
 
+    ### Bug Fixes (v2.1.1)
+
+    #### 🐛 Fixed UI and Visualization Issues
+    - **Comparison Plot**: Now displays theoretical curve alongside experimental data with η comparison
+    - **m* Uncertainty Band**: Fixed visualization - now properly shows shaded region for m* = 0.30-0.35 m₀
+    - **M2 Model UI**: Cleaned up Additional Plots tab - no longer shows empty "Quantum Subband Energy Levels" title for Fang-Howard model
+
     ### Usage Tips
 
     1. Use the sidebar to adjust parameters
@@ -983,7 +1026,7 @@ with tab6:
     - Salvinelli et al., ACS Appl. Mater. Interfaces **10**, 25941 (2018)
 
     ---
-    **Version**: 2.1
+    **Version**: 2.1.1
     **Updated**: November 2025
     **Framework**: Python + Streamlit + Plotly + Matplotlib
     **GitHub**: [2DEG-S-P-toy](https://github.com/aaronderek/2DEG-S-P-toy)

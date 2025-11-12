@@ -1,5 +1,51 @@
 # Changelog
 
+## Version 2.1.1 - 2025-11-12
+
+### Bug Fixes 🐛
+
+#### Comparison Plot Missing Theory Curve (CRITICAL)
+- **Issue**: Theory-experiment comparison plot only showed experimental data points
+- **Root Cause**: `create_comparison_CL_vs_WF_plot()` was called with `theory_data=None`, and the function didn't calculate theoretical curve from model
+- **Impact**: Users couldn't visually compare theory predictions with experimental data
+- **Fix**:
+  - Modified `create_comparison_CL_vs_WF_plot()` to accept model parameters
+  - Function now calculates theoretical ΔE_CL vs ΔWF curve from model
+  - Added experimental linear fit line (red dashed)
+  - Added annotation showing η_exp vs η_theory comparison
+- **Files Modified**: `ui/plots.py`, `app.py`
+
+#### m* Uncertainty Band Not Displayed (HIGH)
+- **Issue**: "Show m* uncertainty band" checkbox had no effect
+- **Root Cause**: Checkbox value `show_uncertainty` was not passed to plotting functions
+- **Impact**: Users couldn't visualize the impact of effective mass uncertainty (m* = 0.30-0.35 m₀)
+- **Fix**:
+  - Added `show_uncertainty` and `model_obj` parameters to `create_ns_vs_Phi_s_plot()`
+  - Added `show_uncertainty` and `model_obj` parameters to `create_Delta_WF_vs_ns_plot()`
+  - Functions now calculate upper/lower bounds with different m* values
+  - Display shaded region using `fill='toself'` in Plotly
+- **Files Modified**: `ui/plots.py`, `app.py`
+
+#### M2 Model Shows Empty Subband Levels Title (MEDIUM)
+- **Issue**: M2 (Fang-Howard) model displayed "Quantum Subband Energy Levels" title with no content below
+- **Root Cause**: UI logic showed title before checking if model has subband methods
+- **Background**: M2 is a variational approximation that doesn't solve for discrete subband levels (E₀, E₁, E₂...)
+- **Fix**:
+  - Moved title inside conditional check for `hasattr(model, 'get_subband_energies')`
+  - Added informative message for M2 explaining why subbands aren't shown
+  - Enhanced M2's n(z) display with key parameters (b, W_eff, ⟨z⟩)
+- **Files Modified**: `app.py`
+
+### Verification
+- ✅ Comparison plot now shows blue theory curve + red experimental points + red dashed fit
+- ✅ η_theory and η_exp values displayed in annotation box
+- ✅ m* uncertainty band appears as shaded region when checkbox enabled
+- ✅ M2 model no longer shows empty subband title
+
+### Files Modified
+- `ui/plots.py`: Updated plot functions with uncertainty bands and theory curve calculation
+- `app.py`: Updated plot function calls and M2 subband display logic
+
 ## Version 2.1 - 2025-11-12
 
 ### Critical Bug Fixes 🐛
