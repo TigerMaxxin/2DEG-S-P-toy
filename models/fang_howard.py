@@ -199,8 +199,18 @@ class FangHowardModel:
         # Solve for self-consistent field
         Es, W_eff, _ = self.solve_self_consistent(Phi_s_eV)
 
-        # Use triangular approximation with effective width
-        V_z = Q * Es * z_array
+        Phi_s_V = Phi_s_eV  # Potential in volts
+
+        # Electric potential: V_elec(z) = -Phi_s * (1 - z/W_eff) for z ≤ W_eff
+        # (Negative because we're measuring from bulk, surface is lower)
+        z_ratio = z_array / W_eff
+        V_elec = -Phi_s_V * (1 - z_ratio)
+
+        # Potential energy for electron: U = -e * V_elec = +e * Phi_s * (1-z/W_eff)
+        # (Positive because electron is negatively charged)
+        V_z = -Q * V_elec  # This gives positive energy (barrier for electrons)
+
+        # Set potential to 0 beyond W_eff
         V_z[z_array > W_eff] = 0
 
         return V_z

@@ -131,10 +131,20 @@ class TriangularModel:
         V_z : array
             Potential energy in Joules at each z position
         """
-        Es = self.get_surface_field(Phi_s_eV)
-        V_z = Q * Es * z_array
+        Phi_s_V = Phi_s_eV  # Potential in volts
+
+        # Electric potential: V_elec(z) = -Phi_s * (1 - z/W) for z ≤ W
+        # (Negative because we're measuring from bulk, surface is lower)
+        z_ratio = z_array / self.W
+        V_elec = -Phi_s_V * (1 - z_ratio)
+
+        # Potential energy for electron: U = -e * V_elec = +e * Phi_s * (1-z/W)
+        # (Positive because electron is negatively charged)
+        V_z = -Q * V_elec  # This gives positive energy (barrier for electrons)
+
         # Set potential to 0 beyond W
         V_z[z_array > self.W] = 0
+
         return V_z
 
     def get_subband_energies(self, Phi_s_eV, n_levels=3):

@@ -395,9 +395,9 @@ def create_publication_comparison_figure(
             Delta_WF_theory,
             Delta_CL_theory,
             color=style_config['colors'][0],
-            linewidth=2.5,
+            linewidth=2.8,
             linestyle='-',
-            label='Theory',
+            label='Theory (initial params)',
             zorder=2
         )
 
@@ -406,11 +406,11 @@ def create_publication_comparison_figure(
         exp_data['Delta_WF'],
         exp_data['Delta_CL'],
         color='red',
-        s=100,
+        s=120,  # Larger markers for better visibility
         marker='o',
         edgecolors='black',
-        linewidths=1.5,
-        label='Experiment',
+        linewidths=1.8,
+        label='Experimental data',
         zorder=10
     )
 
@@ -428,41 +428,37 @@ def create_publication_comparison_figure(
         )
 
     # ========== 3. Experimental Linear Fit ==========
+    # Calculate experimental fit statistics (but don't plot the line to avoid clutter)
+    eta_exp = None
+    r_squared_exp = None
+    std_err_exp = None
+
     if len(exp_data['Delta_WF']) >= 3:
         slope, intercept, r_value, _, std_err = linregress(
             exp_data['Delta_WF'],
             exp_data['Delta_CL']
         )
 
-        # Fit line
-        x_fit = np.array([exp_data['Delta_WF'].min(), exp_data['Delta_WF'].max()])
-        y_fit = slope * x_fit + intercept
+        eta_exp = slope
+        r_squared_exp = r_value**2
+        std_err_exp = std_err
 
-        ax.plot(
-            x_fit,
-            y_fit,
-            color='red',
-            linewidth=2.5,
-            linestyle='--',
-            label=f'Exp. fit (η={slope:.3f})',
-            zorder=3
-        )
-
-        # Add annotation with fit statistics
+        # Add annotation with simplified statistics
         annotation_text = f"Experimental Fit:\n"
         annotation_text += f"η_exp = {slope:.3f} ± {std_err:.3f}\n"
         annotation_text += f"R² = {r_value**2:.4f}"
 
         if eta_theory is not None:
-            annotation_text += f"\n\nTheory:\n"
-            annotation_text += f"η_theory = {eta_theory:.3f}\n"
-            annotation_text += f"Difference: {abs(slope-eta_theory)/eta_theory*100:.1f}%"
+            diff_pct = abs(slope-eta_theory)/max(abs(eta_theory), 0.001)*100
+            annotation_text += f"\n\nInitial Theory:\n"
+            annotation_text += f"η_init = {eta_theory:.3f}\n"
+            annotation_text += f"Δ = {diff_pct:.1f}%"
 
-        # Text box with white background (positioned at top-right to avoid overlapping theory curve)
-        props = dict(boxstyle='round', facecolor='white',
-                    edgecolor='black', alpha=0.95, linewidth=1.5, pad=0.8)
-        ax.text(0.98, 0.98, annotation_text, transform=ax.transAxes,
-               fontsize=11, verticalalignment='top', horizontalalignment='right', bbox=props)
+        # Text box positioned at left side to avoid overlapping curves
+        props = dict(boxstyle='round', facecolor='rgba(255, 255, 255, 0.95)',
+                    edgecolor='black', alpha=0.98, linewidth=1.5, pad=0.8)
+        ax.text(0.02, 0.98, annotation_text, transform=ax.transAxes,
+               fontsize=11, verticalalignment='top', horizontalalignment='left', bbox=props)
 
     # ========== 4. Legacy theory_data support ==========
     elif theory_data is not None:
@@ -484,28 +480,34 @@ def create_publication_comparison_figure(
             exp_data['Delta_WF'][sort_idx],
             fit_result['theory_Delta_CL'][sort_idx],
             color=style_config['colors'][2] if len(style_config['colors']) > 2 else 'green',
-            linewidth=2.5,
-            linestyle=':',
-            label=f"Fitted (η={fit_result['eta_fit']:.3f}, R²={fit_result['r_squared']:.3f})",
+            linewidth=3.0,
+            linestyle='-',  # Solid line for fitted curve (more important than initial theory)
+            label=f"Best fit (η={fit_result['eta_fit']:.3f}, R²={fit_result['r_squared']:.3f})",
             zorder=4
         )
 
-    # Labels
-    ax.set_xlabel(r'Work Function Change $\Delta$WF (eV)', fontsize=14, fontweight='bold')
-    ax.set_ylabel(r'Core Level Shift $\Delta E_{CL}$ (eV)', fontsize=14, fontweight='bold')
+    # Labels with larger font
+    ax.set_xlabel(r'Work Function Change $\Delta$WF (eV)', fontsize=15, fontweight='bold')
+    ax.set_ylabel(r'Core Level Shift $\Delta E_{CL}$ (eV)', fontsize=15, fontweight='bold')
+
+    # Adjust X-axis range to minimize empty space
+    if exp_data is not None and len(exp_data['Delta_WF']) > 0:
+        x_min = np.min(exp_data['Delta_WF']) - 0.02
+        x_max = np.max(exp_data['Delta_WF']) + 0.02
+        ax.set_xlim(x_min, x_max)
 
     # Grid
     if style_config.get('grid', True):
         ax.grid(True, alpha=style_config.get('grid_alpha', 0.3),
                 linestyle=style_config.get('grid_style', '--'))
 
-    # Legend
+    # Legend - positioned to avoid annotation box
     ax.legend(frameon=style_config.get('legend_frame', True), loc='lower right',
-             fontsize=11, framealpha=0.9, edgecolor='black')
+             fontsize=11, framealpha=0.95, edgecolor='black', fancybox=True, shadow=True)
 
     # Add zero lines
-    ax.axhline(y=0, color='k', linestyle='-', linewidth=0.5)
-    ax.axvline(x=0, color='k', linestyle='-', linewidth=0.5)
+    ax.axhline(y=0, color='k', linestyle='-', linewidth=0.8, alpha=0.5)
+    ax.axvline(x=0, color='k', linestyle='-', linewidth=0.8, alpha=0.5)
 
     plt.tight_layout()
 
