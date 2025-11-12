@@ -226,6 +226,88 @@ with col1:
 with col2:
     clear_comparison = st.button("Clear Compare", use_container_width=True)
 
+# ============================================================================
+# INITIALIZE MODEL AND DATA (before tabs, so all tabs can access)
+# ============================================================================
+
+# Initialize the selected model
+if model_type == "M1-Triangular":
+    model = TriangularModel(m_star, epsilon_r, W_nm)
+elif model_type == "M2-Fang-Howard":
+    model = FangHowardModel(m_star, epsilon_r, W_nm)
+else:  # M3-Parabolic
+    model = ParabolicModel(m_star, epsilon_r, W_nm)
+
+# Initialize XPS model
+xps_model = XPSModel(lambda_xps, theta_xps)
+
+# Generate curve data for Figure 1: ns vs Phi_s
+Phi_s_range = np.linspace(0.1, 0.6, 100)
+ns_array = model.calculate_ns(Phi_s_range)
+
+curves_fig1 = [{
+    'name': f"{model_type}, W={W_nm:.1f}nm",
+    'Phi_s': Phi_s_range,
+    'ns': ns_array,
+    'color': 'blue'
+}]
+
+# Generate curve data for Figure 2: Delta_WF vs ns
+# Typical 2DEG density range: 0.2 to 2.0 × 10¹³ cm⁻²
+# Converting to m⁻²: multiply by 1e13 * 1e4 = 1e17
+ns_range = np.linspace(2e16, 2e17, 100)  # m⁻² (0.2 to 2.0 × 10¹³ cm⁻²)
+
+# Calculate Delta_WF for each ns
+Delta_WF_array = model.calculate_Delta_WF(ns_range)
+
+# Without adsorbates
+curves_fig2 = [{
+    'name': f"{model_type}, W={W_nm:.1f}nm (no ads)",
+    'ns': ns_range,
+    'Delta_WF': Delta_WF_array,
+    'with_adsorbate': False,
+    'color': 'blue'
+}]
+
+# With adsorbates
+if show_adsorbates:
+    Delta_WF_with_ads = Delta_WF_array + Delta_Phi_dip
+    curves_fig2.append({
+        'name': f"{model_type}, W={W_nm:.1f}nm (with ads)",
+        'ns': ns_range,
+        'Delta_WF': Delta_WF_with_ads,
+        'with_adsorbate': True,
+        'color': 'blue'
+    })
+
+# Add comparison curves if any
+for comp_curve in st.session_state.comparison_curves:
+    # For Figure 1
+    curves_fig1.append({
+        'name': comp_curve['name'],
+        'Phi_s': comp_curve['Phi_s_range'],
+        'ns': comp_curve['ns_array'],
+        'color': comp_curve.get('color', 'gray')
+    })
+
+    # For Figure 2
+    curves_fig2.append({
+        'name': comp_curve['name'] + " (no ads)",
+        'ns': comp_curve['ns_range'],
+        'Delta_WF': comp_curve['Delta_WF_array'],
+        'with_adsorbate': False,
+        'color': comp_curve.get('color', 'gray')
+    })
+
+    if comp_curve.get('with_adsorbates', False):
+        curves_fig2.append({
+            'name': comp_curve['name'] + " (with ads)",
+            'ns': comp_curve['ns_range'],
+            'Delta_WF': comp_curve['Delta_WF_with_ads'],
+            'with_adsorbate': True,
+            'color': comp_curve.get('color', 'gray')
+        })
+
 # Main area - Create tabs
 tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
     "📊 Core Figures",
@@ -241,83 +323,6 @@ tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
 # ============================================================================
 
 with tab1:
-    # Initialize the selected model
-    if model_type == "M1-Triangular":
-        model = TriangularModel(m_star, epsilon_r, W_nm)
-    elif model_type == "M2-Fang-Howard":
-        model = FangHowardModel(m_star, epsilon_r, W_nm)
-    else:  # M3-Parabolic
-        model = ParabolicModel(m_star, epsilon_r, W_nm)
-
-    # Initialize XPS model
-    xps_model = XPSModel(lambda_xps, theta_xps)
-
-    # Generate curve data for Figure 1: ns vs Phi_s
-    Phi_s_range = np.linspace(0.1, 0.6, 100)
-    ns_array = model.calculate_ns(Phi_s_range)
-
-    curves_fig1 = [{
-        'name': f"{model_type}, W={W_nm:.1f}nm",
-        'Phi_s': Phi_s_range,
-        'ns': ns_array,
-        'color': 'blue'
-    }]
-
-    # Generate curve data for Figure 2: Delta_WF vs ns
-    # Typical 2DEG density range: 0.2 to 2.0 × 10¹³ cm⁻²
-    # Converting to m⁻²: multiply by 1e13 * 1e4 = 1e17
-    ns_range = np.linspace(2e16, 2e17, 100)  # m⁻² (0.2 to 2.0 × 10¹³ cm⁻²)
-
-    # Calculate Delta_WF for each ns
-    Delta_WF_array = model.calculate_Delta_WF(ns_range)
-
-    # Without adsorbates
-    curves_fig2 = [{
-        'name': f"{model_type}, W={W_nm:.1f}nm (no ads)",
-        'ns': ns_range,
-        'Delta_WF': Delta_WF_array,
-        'with_adsorbate': False,
-        'color': 'blue'
-    }]
-
-    # With adsorbates
-    if show_adsorbates:
-        Delta_WF_with_ads = Delta_WF_array + Delta_Phi_dip
-        curves_fig2.append({
-            'name': f"{model_type}, W={W_nm:.1f}nm (with ads)",
-            'ns': ns_range,
-            'Delta_WF': Delta_WF_with_ads,
-            'with_adsorbate': True,
-            'color': 'blue'
-        })
-
-    # Add comparison curves if any
-    for comp_curve in st.session_state.comparison_curves:
-        # For Figure 1
-        curves_fig1.append({
-            'name': comp_curve['name'],
-            'Phi_s': comp_curve['Phi_s_range'],
-            'ns': comp_curve['ns_array'],
-            'color': comp_curve.get('color', 'gray')
-        })
-
-        # For Figure 2
-        curves_fig2.append({
-            'name': comp_curve['name'] + " (no ads)",
-            'ns': comp_curve['ns_range'],
-            'Delta_WF': comp_curve['Delta_WF_array'],
-            'with_adsorbate': False,
-            'color': comp_curve.get('color', 'gray')
-        })
-
-        if comp_curve.get('with_adsorbates', False):
-            curves_fig2.append({
-                'name': comp_curve['name'] + " (with ads)",
-                'ns': comp_curve['ns_range'],
-                'Delta_WF': comp_curve['Delta_WF_with_ads'],
-                'with_adsorbate': True,
-                'color': comp_curve.get('color', 'gray')
-            })
 
     # Create and display plots
     col1, col2 = st.columns(2)
