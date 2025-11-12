@@ -510,7 +510,8 @@ def create_comparison_CL_vs_WF_plot(
         W_nm_model = getattr(model, 'W_nm', None)
         W_m_model = getattr(model, 'W', None)
         print(f"W_nm (from model) = {W_nm_model} nm")
-        print(f"W_m (from model) = {W_m_model*1e9 if W_m_model else 'N/A':.3f} nm")
+        W_m_str = f"{W_m_model*1e9:.3f}" if W_m_model else "N/A"
+        print(f"W_m (from model) = {W_m_str} nm")
         print(f"λ = {lambda_nm} nm")
         print(f"θ = {theta_deg}°")
 
