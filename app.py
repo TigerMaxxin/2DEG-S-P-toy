@@ -87,7 +87,7 @@ m_star_ratio = st.sidebar.slider(
     max_value=M_STAR_RANGE[1],
     value=DEFAULT_M_STAR / M0,
     step=0.01,
-    help="Effective mass ratio"
+    help="Effective mass ratio: m*/m₀ represents the ratio of the electron's effective mass in the oxide to the free electron mass. In SrTiO₃, electrons move in the conduction band with reduced inertia (m* ≈ 0.32m₀) due to the crystal lattice periodic potential. This parameter directly affects quantum confinement energies E_n ∝ (m*)^(-1/3) and the 2DEG formation. Lower m* leads to higher mobility and stronger quantum effects."
 )
 m_star = m_star_ratio * M0
 
@@ -98,7 +98,7 @@ epsilon_r = st.sidebar.slider(
     max_value=EPSILON_R_RANGE[1],
     value=DEFAULT_EPSILON_R,
     step=1,
-    help="Relative dielectric constant"
+    help="Relative dielectric constant: εᵣ describes how effectively the material screens electric fields compared to vacuum (ε₀). For SrTiO₃, εᵣ ≈ 9 at room temperature (static value ~300 at low T). This parameter controls the relationship between surface field and carrier density: n_s = (ε₀·εᵣ·E_s)/q. Higher εᵣ means stronger screening and higher carrier density for the same band bending. It also affects the confinement width W_eff and quantum subband energies."
 )
 
 # Temperature
@@ -108,7 +108,7 @@ temperature = st.sidebar.slider(
     max_value=TEMPERATURE_RANGE[1],
     value=DEFAULT_TEMPERATURE,
     step=10,
-    help="Temperature in Kelvin"
+    help="Temperature in Kelvin: Sets the thermal energy k_B·T which controls the Fermi-Dirac distribution tail and thermal broadening of quantum states. At room temperature (300K), k_B·T ≈ 26 meV. For typical 2DEG with E_F ~ 100-300 meV, the system is partially degenerate. Low T (< 100K) sharpens the Fermi edge and enables observation of quantum oscillations. High T (> 400K) increases thermal smearing and can affect XPS peak widths. Currently used for future thermal effects modeling."
 )
 
 st.sidebar.markdown("---")
@@ -121,7 +121,7 @@ Phi_s = st.sidebar.slider(
     max_value=PHI_S_RANGE[1],
     value=0.4,
     step=0.01,
-    help="Surface potential (band bending)"
+    help="Surface potential (band bending): Φ_s represents the electrostatic potential drop from the bulk to the surface, driving 2DEG formation through downward band bending. Positive Φ_s creates an electron accumulation layer at the surface. This parameter directly determines: (1) the surface electric field E_s, (2) the 2D carrier density n_s, (3) the quantum confinement strength, and (4) the work function change ΔWF. Typical values: 0.2-0.6 eV for oxide 2DEG systems. Measured via work function shifts in UPS/KPFM or core level shifts in XPS."
 )
 
 # Depletion width
@@ -131,7 +131,7 @@ W_nm = st.sidebar.slider(
     max_value=W_RANGE[1],
     value=DEFAULT_W,
     step=0.1,
-    help="Depletion layer width"
+    help="Depletion/confinement width: W defines the characteristic length scale over which the surface band bending potential extends into the bulk. Physical interpretation depends on the model: (M1-Triangular) W is the depletion width where V(W)=0; (M2-Fang-Howard) W sets initial guess for self-consistent W_eff=6/b; (M3-Parabolic) W is the full extent of the parabolic well. Typical values: 2-5 nm for strong confinement. Affects: n_s ∝ 1/W, confinement energies, and the slope dΔWF/dn_s. Can be fitted from experimental ΔWF vs n_s data."
 )
 
 st.sidebar.markdown("---")
@@ -141,7 +141,7 @@ st.sidebar.subheader("Surface Adsorbates")
 show_adsorbates = st.sidebar.checkbox(
     "Show with adsorbates",
     value=False,
-    help="Include adsorbate dipole layer effects"
+    help="Include adsorbate dipole layer effects: Enables modeling of surface dipole layers from adsorbed species (O₂, H₂O, organic molecules, etc.). Adsorbates with perpendicular dipole moments create a Helmholtz-type potential step ΔΦ_dip = -(N_ads·μ⊥)/ε₀ that shifts the work function without changing the underlying 2DEG density. This decouples ΔWF from n_s, which is crucial for interpreting UPS/XPS data during annealing experiments. Oxygen typically has μ⊥ ~ 1-2 Debye pointing outward (increases WF), while hydrogen points inward (decreases WF)."
 )
 
 if show_adsorbates:
@@ -152,7 +152,7 @@ if show_adsorbates:
         max_value=1.0,
         value=0.5,
         step=0.05,
-        help="Adsorbate coverage fraction"
+        help="Adsorbate coverage fraction: θ = N_ads/N_site represents the fraction of available surface sites occupied by adsorbates. θ=0 means clean surface (vacuum annealing), θ=1 means saturated monolayer (full oxygen exposure). The actual adsorbate density is N_ads = θ·N_site. Coverage controls the magnitude of the dipole shift: ΔΦ_dip ∝ θ. In temperature-programmed experiments, θ typically decreases from ~1 at low T to ~0 at high T as adsorbates desorb. Measured via XPS intensity ratios (e.g., O1s/Ti2p)."
     )
 
     # Dipole moment
@@ -162,7 +162,7 @@ if show_adsorbates:
         max_value=3.0,
         value=1.5,
         step=0.1,
-        help="Perpendicular dipole moment"
+        help="Perpendicular dipole moment: μ⊥ is the component of the molecular dipole moment normal to the surface (in Debye units, 1 D ≈ 3.34×10⁻³⁰ C·m). Determines the magnitude of work function shift per adsorbate: ΔΦ_dip = -(N_ads·μ⊥)/ε₀. Positive μ⊥ (electron-rich end outward, e.g., O⁻-Ti) increases work function. Typical values: O₂ on oxides ~1-2 D, H₂O ~1.85 D, organic molecules 0.5-3 D. Can be estimated from DFT calculations or fitted from experimental WF vs coverage data. The sign convention here: positive μ⊥ → negative ΔΦ_dip in the Helmholtz equation used in this code."
     )
 
     # Surface site density
@@ -172,7 +172,7 @@ if show_adsorbates:
         max_value=15.0,
         value=14.0,
         step=0.1,
-        help="Surface site density (5e13 to 1e15 cm⁻²)"
+        help="Surface site density: N_site is the total number of available adsorption sites per unit area (displayed as 10^x cm⁻²). For crystalline surfaces, this is related to the surface atomic density. For SrTiO₃ (001), the TiO₂-terminated surface has N_site ~ 6.5×10¹⁴ cm⁻² (one Ti per unit cell). For SrO termination, N_site ~ 6.5×10¹⁴ cm⁻² (one Sr per unit cell). Polycrystalline or amorphous surfaces may have lower effective site densities (10¹³-10¹⁴ cm⁻²). Together with coverage θ and dipole μ⊥, determines the total work function shift from adsorbates."
     )
     N_site = 10 ** N_site_exp  # Convert from log scale to actual value
     from physics.xps import calculate_dipole_from_coverage
@@ -198,7 +198,7 @@ lambda_xps = st.sidebar.slider(
     max_value=LAMBDA_XPS_RANGE[1],
     value=DEFAULT_LAMBDA_XPS,
     step=0.1,
-    help="Inelastic mean free path"
+    help="Inelastic mean free path (IMFP): λ is the average distance a photoelectron travels in the solid before undergoing inelastic scattering, defining the XPS probing depth. For typical XPS kinetic energies (200-1500 eV), λ ≈ 0.5-3 nm in oxides. The effective sampling depth is λ_eff = λ·cos(θ) where θ is the emission angle. XPS is surface-sensitive due to small λ: 95% of signal comes from 3λ_eff. Controls the weighting function w(z) = (1/λ_eff)·exp(-z/λ_eff) and thus the measured core level shift ΔE_CL. Shorter λ → more surface-sensitive, larger η = |ΔE_CL|/Φ_s."
 )
 
 # XPS detection angle
@@ -208,7 +208,7 @@ theta_xps = st.sidebar.slider(
     max_value=THETA_XPS_RANGE[1],
     value=0,
     step=5,
-    help="Detection angle (0° = normal emission)"
+    help="Detection angle (XPS emission angle): θ is the angle between the surface normal and the photoelectron detection direction. θ=0° (normal emission) samples deeper into the bulk. θ=60° (grazing emission) enhances surface sensitivity. The effective probing depth scales as λ_eff = λ·cos(θ), so increasing θ reduces the sampling depth and increases surface weighting. Angle-resolved XPS (ARXPS) at different θ can probe the depth profile of band bending. In this model, affects the XPS weight function w(z) and thus the core level shift η parameter."
 )
 
 st.sidebar.markdown("---")
@@ -325,11 +325,118 @@ tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
 
 with tab1:
 
+    # Display physics formulas for the selected model
+    st.markdown("### 🔬 Physics Formulas for Selected Model")
+
+    if model_type == "M1-Triangular":
+        with st.expander("📐 **M1: Triangular Potential (Constant Electric Field)**", expanded=True):
+            st.markdown("""
+            **Physical Picture:** Constant electric field at the surface, creating a triangular potential well.
+
+            **Key Equations:**
+            """)
+
+            col_f1, col_f2 = st.columns(2)
+            with col_f1:
+                st.latex(r"V(z) = q \cdot E_s \cdot z \quad (0 \leq z \leq W)")
+                st.caption("Potential energy profile")
+
+                st.latex(r"E_s = \frac{\Phi_s}{W}")
+                st.caption("Surface electric field")
+
+                st.latex(r"n_s = \frac{\varepsilon_0 \varepsilon_r E_s}{q} = \frac{\varepsilon_0 \varepsilon_r \Phi_s}{q W}")
+                st.caption("2D electron sheet density")
+
+            with col_f2:
+                st.latex(r"\Delta WF = -\Phi_s")
+                st.caption("Work function change")
+
+                st.latex(r"\frac{d\Delta WF}{dn_s} = -\frac{q W}{\varepsilon_0 \varepsilon_r}")
+                st.caption("Slope of ΔWF vs n_s")
+
+                st.latex(r"E_n = a_n \left(\frac{\hbar^2}{2m^*}\right)^{1/3} (q E_s)^{2/3}")
+                st.caption("Quantum subband energies (Airy zeros: a₀=2.338, a₁=4.088, ...)")
+
+    elif model_type == "M2-Fang-Howard":
+        with st.expander("🌊 **M2: Fang-Howard (Self-Consistent Variational)**", expanded=True):
+            st.markdown("""
+            **Physical Picture:** Self-consistent variational approach with exponentially decaying electron wavefunction.
+
+            **Key Equations:**
+            """)
+
+            col_f1, col_f2 = st.columns(2)
+            with col_f1:
+                st.latex(r"\psi(z) = \sqrt{\frac{b^3}{2}} \cdot z \cdot e^{-bz/2}")
+                st.caption("Variational wavefunction (normalized)")
+
+                st.latex(r"b = \left(\frac{12 m^* q E_s}{\hbar^2}\right)^{1/3}")
+                st.caption("Variational parameter [m⁻¹]")
+
+                st.latex(r"W_{eff} = \frac{6}{b}")
+                st.caption("Effective confinement width")
+
+            with col_f2:
+                st.latex(r"n(z) = n_s |\psi(z)|^2 = n_s \frac{b^3}{2} z^2 e^{-bz}")
+                st.caption("Electron density distribution")
+
+                st.latex(r"E_s = \frac{2\Phi_s}{W_{eff}}")
+                st.caption("Self-consistent surface field")
+
+                st.latex(r"n_s = \frac{\varepsilon_0 \varepsilon_r E_s}{q}")
+                st.caption("2D electron sheet density")
+
+            st.info("⚙️ **Self-consistency:** Iteratively solve for E_s until W_eff converges (typically 3-5 iterations)")
+
+    else:  # M3-Parabolic
+        with st.expander("📊 **M3: Parabolic Potential (Linear Field Decay)**", expanded=True):
+            st.markdown("""
+            **Physical Picture:** Linearly decaying electric field, creating a parabolic (harmonic) potential well.
+
+            **Key Equations:**
+            """)
+
+            col_f1, col_f2 = st.columns(2)
+            with col_f1:
+                st.latex(r"V(z) = -\Phi_s \left(1 - \frac{z}{W}\right)^2 \quad (0 \leq z \leq W)")
+                st.caption("Parabolic potential profile")
+
+                st.latex(r"E(z) = \frac{2\Phi_s}{W}\left(1 - \frac{z}{W}\right)")
+                st.caption("Electric field (linear decay)")
+
+                st.latex(r"E_s = \frac{2\Phi_s}{W}")
+                st.caption("Surface field (2× M1!)")
+
+            with col_f2:
+                st.latex(r"n_s = \frac{\varepsilon_0 \varepsilon_r E_s}{q} = \frac{2\varepsilon_0 \varepsilon_r \Phi_s}{q W}")
+                st.caption("2D electron sheet density (2× M1!)")
+
+                st.latex(r"\frac{d\Delta WF}{dn_s} = -\frac{q W}{2\varepsilon_0 \varepsilon_r}")
+                st.caption("Slope of ΔWF vs n_s (half of M1!)")
+
+                st.latex(r"E_n = \hbar\omega\left(n + \frac{1}{2}\right), \quad \omega = \sqrt{\frac{2qE_s}{m^* W}}")
+                st.caption("Harmonic oscillator energy levels")
+
+    st.markdown("---")
+
     # Create and display plots
     col1, col2 = st.columns(2)
 
     with col1:
         st.subheader("Figure 1: Sheet Density vs Surface Potential")
+        with st.expander("ℹ️ **Chart Explanation**", expanded=False):
+            st.markdown("""
+            **What this chart shows:** The relationship between surface band bending (Φₛ) and 2D electron sheet density (nₛ).
+
+            **X-axis (Φₛ):** Surface potential in eV, representing the electrostatic potential drop from bulk to surface. Positive values indicate downward band bending that creates electron accumulation.
+
+            **Y-axis (nₛ):** Two-dimensional electron sheet density in units of 10¹³ cm⁻². This is the total number of electrons per unit area confined at the surface.
+
+            **Physical interpretation:** As band bending increases (larger Φₛ), more electrons accumulate at the surface. The slope depends on the model and depletion width W. Linear relationship for M1/M3, slightly nonlinear for M2 due to self-consistency.
+
+            **Typical values:** For oxide 2DEGs, Φₛ ~ 0.2-0.6 eV corresponds to nₛ ~ 0.5-2.0 × 10¹³ cm⁻².
+            """)
+
         fig1 = create_ns_vs_Phi_s_plot(curves_fig1, show_uncertainty=show_uncertainty, model_obj=model)
         st.plotly_chart(fig1, use_container_width=True)
 
@@ -339,6 +446,19 @@ with tab1:
 
     with col2:
         st.subheader("Figure 2: Work Function Change vs Sheet Density")
+        with st.expander("ℹ️ **Chart Explanation**", expanded=False):
+            st.markdown("""
+            **What this chart shows:** The relationship between 2D electron density (nₛ) and work function change (ΔWF), which is measurable by UPS/KPFM.
+
+            **X-axis (nₛ):** Two-dimensional electron sheet density in units of 10¹³ cm⁻². Represents the carrier density confined at the surface.
+
+            **Y-axis (ΔWF):** Work function change in eV, relative to the clean surface. Negative values indicate work function decrease (easier to extract electrons), which occurs when electrons accumulate at the surface.
+
+            **Physical interpretation:** This is the key experimental observable! The slope dΔWF/dnₛ is model-dependent and directly relates to the confinement width W. Solid lines show intrinsic band bending effect. Dashed lines (when adsorbates enabled) include additional Helmholtz dipole shift that decouples ΔWF from nₛ.
+
+            **Typical values:** ΔWF ~ -0.2 to -0.6 eV for oxide 2DEGs. Slope ranges from -0.2 to -0.6 eV/(10¹³ cm⁻²) depending on W and model.
+            """)
+
         fig2 = create_Delta_WF_vs_ns_plot(curves_fig2, show_uncertainty=show_uncertainty, model_obj=model)
         st.plotly_chart(fig2, use_container_width=True)
 
@@ -368,6 +488,39 @@ with tab1:
 with tab2:
     st.subheader("Depth Profiles and Distributions")
 
+    # Display XPS formulas
+    with st.expander("📊 **XPS Core Level Shift Formulas**", expanded=False):
+        st.markdown("""
+        **Physical Picture:** X-ray photoelectron spectroscopy (XPS) probes the surface band bending through depth-weighted sampling of the potential profile.
+
+        **Key Equations:**
+        """)
+
+        col_x1, col_x2 = st.columns(2)
+        with col_x1:
+            st.latex(r"w(z) = \frac{1}{\lambda_{eff}} \exp\left(-\frac{z}{\lambda_{eff}}\right)")
+            st.caption("XPS sampling weight (exponential decay)")
+
+            st.latex(r"\lambda_{eff} = \lambda \cdot \cos(\theta)")
+            st.caption("Effective probing depth (angle-dependent)")
+
+            st.latex(r"\int_0^\infty w(z) \, dz = 1")
+            st.caption("Normalization condition")
+
+        with col_x2:
+            st.latex(r"\Delta E_{CL} = -\int_0^\infty w(z) \cdot V(z) \, dz")
+            st.caption("Core level shift (depth-weighted potential)")
+
+            st.latex(r"\eta = \frac{|\Delta E_{CL}|}{\Phi_s}")
+            st.caption("Effective sampling factor (0 < η < 1)")
+
+            st.latex(r"\Delta \Phi_{dip} = -\frac{N_{ads} \cdot \mu_\perp}{\varepsilon_0}")
+            st.caption("Adsorbate dipole shift (Helmholtz equation)")
+
+        st.info("💡 **Interpretation:** η ≈ 0.85 typical for λ ~ 2 nm. Smaller λ or larger θ → more surface-sensitive → larger η.")
+
+    st.markdown("---")
+
     # Create z array for profiles
     z_max = 3 * W_nm
     z_nm_array = np.linspace(0, z_max, 500)
@@ -382,12 +535,38 @@ with tab2:
 
     with col1:
         st.markdown("### Potential Profile V(z)")
+        with st.expander("ℹ️ **Chart Explanation**", expanded=False):
+            st.markdown("""
+            **What this chart shows:** The electrostatic potential energy profile as a function of depth from the surface.
+
+            **X-axis (z):** Depth from the surface in nanometers. z=0 is the surface, increasing z goes into the bulk.
+
+            **Y-axis (V):** Potential energy in eV. The shape depends on the model: triangular (M1) shows linear increase, Fang-Howard (M2) shows soft triangular with exponential decay, parabolic (M3) shows quadratic profile.
+
+            **Physical interpretation:** This potential well confines electrons near the surface. The steeper the gradient near z=0, the stronger the surface electric field E_s = -dV/dz. The depth where V(z)→0 defines the depletion width W. Electrons are confined within the first few nanometers.
+
+            **Model comparison:** M1 (constant field) vs M2 (self-consistent decay) vs M3 (linear field decay). The choice affects n_s(Φ_s) relationship and XPS core level shifts.
+            """)
+
         fig_V = create_potential_profile_plot(z_nm_array, V_z_eV)
         st.plotly_chart(fig_V, use_container_width=True)
 
     with col2:
         if show_w_z:
             st.markdown("### XPS Sampling Weight w(z)")
+            with st.expander("ℹ️ **Chart Explanation**", expanded=False):
+                st.markdown("""
+                **What this chart shows:** The depth-dependent weighting function for XPS measurements, showing how much each depth contributes to the measured signal.
+
+                **X-axis (z):** Depth from the surface in nanometers. z=0 is the surface.
+
+                **Y-axis (w):** Sampling weight in units of nm⁻¹. This represents the probability density that a photoelectron detected in XPS originated from depth z.
+
+                **Physical interpretation:** w(z) = (1/λ_eff)·exp(-z/λ_eff) describes exponential attenuation of photoelectrons due to inelastic scattering. Most signal (63%) comes from 0 to λ_eff, and 95% from 0 to 3λ_eff. The effective depth λ_eff = λ·cos(θ) decreases with increasing emission angle θ, making grazing angle more surface-sensitive.
+
+                **Use in XPS:** The measured core level shift ΔE_CL is the integral of w(z)·V(z), not just the surface value. This is why η = |ΔE_CL|/Φ_s < 1.
+                """)
+
             w_z = calculate_xps_weight(z_m_array, lambda_xps, theta_xps)
             fig_w = create_xps_weight_plot(z_nm_array, w_z)
             st.plotly_chart(fig_w, use_container_width=True)
@@ -395,6 +574,21 @@ with tab2:
     # Electron density for M2
     if show_n_z and model_type == "M2-Fang-Howard":
         st.markdown("### Electron Density Distribution n(z)")
+        with st.expander("ℹ️ **Chart Explanation**", expanded=False):
+            st.markdown("""
+            **What this chart shows:** The spatial distribution of electron density as a function of depth for the M2 Fang-Howard model.
+
+            **X-axis (z):** Depth from the surface in nanometers. z=0 is the surface.
+
+            **Y-axis (n):** Electron density in arbitrary units (normalized). Shows the probability density of finding electrons at each depth.
+
+            **Physical interpretation:** For M2 Fang-Howard, n(z) = n_s·|ψ(z)|² = n_s·(b³/2)·z²·exp(-bz). The distribution peaks at depth z_peak = 2/b, then decays exponentially. Average depth is ⟨z⟩ = 3/b. This is more realistic than M1/M3 which assume sharp or infinite wells.
+
+            **Parameters:** The variational parameter b determines the confinement: larger b → tighter confinement near surface. b is calculated self-consistently from the electric field and material properties.
+
+            **Note:** Only available for M2 Fang-Howard model which explicitly calculates the wavefunction.
+            """)
+
         st.info("""
         **M2 Fang-Howard Model:**
         Variational approximation using single effective wavefunction.
@@ -613,6 +807,24 @@ with tab3:
         st.markdown("---")
         st.subheader("4. Comparison Plots")
 
+        # Chart explanation for comparison plot
+        with st.expander("ℹ️ **Comparison Chart Explanation**", expanded=False):
+            st.markdown("""
+            **What this chart shows:** Direct comparison between experimental measurements (ΔE_CL vs ΔWF) and theoretical predictions.
+
+            **X-axis (ΔWF):** Work function change in eV, measured by UPS or KPFM. Represents the change in surface electronic structure.
+
+            **Y-axis (ΔE_CL):** Core level shift in eV, measured by XPS. Represents the depth-weighted average of the surface potential.
+
+            **Data points (red):** Your experimental measurements. Each point typically represents a different annealing temperature or treatment condition.
+
+            **Theory line (blue):** Model prediction using the relationship ΔE_CL = η × ΔWF, where η is the XPS sampling factor (typically 0.7-0.95).
+
+            **Fitted line (green):** Best-fit line after parameter optimization. The closer to the theory line, the better the model describes your data.
+
+            **Physical interpretation:** Both ΔE_CL and ΔWF should follow the same band bending, but XPS (ΔE_CL) samples deeper than UPS (ΔWF), hence |ΔE_CL| < |ΔWF|. The slope η depends on λ (mean free path) and θ (emission angle).
+            """)
+
         # Main comparison plot: ΔE_CL vs ΔWF
         fig_comparison = create_comparison_CL_vs_WF_plot(
             exp_data=exp_data,
@@ -626,6 +838,21 @@ with tab3:
 
         # Annealing trajectory if temperature data available
         if 'T_degC' in exp_data:
+            with st.expander("ℹ️ **Annealing Trajectory Explanation**", expanded=False):
+                st.markdown("""
+                **What this chart shows:** Evolution of surface electronic structure during temperature-programmed annealing experiments.
+
+                **X-axis (ΔWF):** Work function change in eV. Typically starts negative (electron-rich) and moves toward zero as temperature increases.
+
+                **Y-axis (ΔE_CL):** Core level shift in eV. Follows ΔWF but with reduced magnitude due to depth averaging.
+
+                **Color scale (T):** Temperature in °C. Shows the thermal treatment sequence. Typically progresses from low T (dark blue) to high T (yellow/red).
+
+                **Physical interpretation:** During vacuum annealing, adsorbates desorb with increasing temperature, causing work function to increase (ΔWF → 0) and 2DEG density to decrease. The trajectory should follow a straight line with slope η if only band bending changes. Deviations indicate additional effects (e.g., adsorbate dipoles, surface reconstruction).
+
+                **Use:** Helps visualize whether your experimental trajectory is consistent with the simple band bending + adsorbate model.
+                """)
+
             fig_trajectory = create_annealing_trajectory_plot(exp_data)
             if fig_trajectory is not None:
                 st.plotly_chart(fig_trajectory, use_container_width=True)
@@ -634,6 +861,28 @@ with tab3:
         if st.session_state.fit_result is not None:
             st.markdown("---")
             st.subheader("5. Residual Analysis")
+
+            with st.expander("ℹ️ **Residual Analysis Explanation**", expanded=False):
+                st.markdown("""
+                **What this chart shows:** Statistical diagnostic plots to assess the quality of the fit between theory and experiment.
+
+                **Left panel - Residuals vs Fitted:**
+                - **X-axis:** Fitted ΔE_CL values (eV) from the theoretical model.
+                - **Y-axis:** Residuals (eV) = Experimental - Fitted values.
+                - **Interpretation:** Points should scatter randomly around zero. Patterns indicate systematic deviations (e.g., model inadequacy, nonlinear effects).
+
+                **Middle panel - Residual Histogram:**
+                - **X-axis:** Residual values (eV).
+                - **Y-axis:** Frequency count.
+                - **Interpretation:** Should be approximately symmetric and centered at zero. Width indicates scatter magnitude (experimental noise + model error).
+
+                **Right panel - Q-Q Plot (Normal Probability):**
+                - **X-axis:** Theoretical quantiles (normal distribution).
+                - **Y-axis:** Sample quantiles (your residuals).
+                - **Interpretation:** Points should follow the diagonal red line if residuals are normally distributed. Deviations suggest outliers or non-Gaussian errors.
+
+                **Good fit indicators:** Random scatter, centered histogram, linear Q-Q plot, small RMSE, R² close to 1.0.
+                """)
 
             fig_residuals = create_residual_analysis_plot(
                 exp_data=exp_data,
