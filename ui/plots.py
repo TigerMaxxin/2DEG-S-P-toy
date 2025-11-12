@@ -500,6 +500,31 @@ def create_comparison_CL_vs_WF_plot(
     # ========== 1. Calculate Theory Curve (if model provided) ==========
     eta_theory = None
     if model is not None and lambda_nm is not None and theta_deg is not None:
+        # DEBUG: Print model parameters
+        print("=" * 60)
+        print("=== DEBUG: Theory Curve Calculation ===")
+        print(f"Model: {model}")
+        print(f"Model type: {type(model).__name__}")
+
+        # Get model parameters
+        W_nm_model = getattr(model, 'W_nm', None)
+        W_m_model = getattr(model, 'W', None)
+        print(f"W_nm (from model) = {W_nm_model} nm")
+        print(f"W_m (from model) = {W_m_model*1e9 if W_m_model else 'N/A':.3f} nm")
+        print(f"λ = {lambda_nm} nm")
+        print(f"θ = {theta_deg}°")
+
+        # Calculate λeff
+        theta_rad = theta_deg * np.pi / 180
+        lambda_eff = lambda_nm * np.cos(theta_rad)
+        print(f"λeff = λ·cos(θ) = {lambda_eff:.3f} nm")
+
+        # Expected η from simple formula
+        if W_nm_model:
+            eta_expected = 1 - np.exp(-W_nm_model / lambda_eff)
+            print(f"Expected η ≈ 1 - exp(-W/λeff) = 1 - exp(-{W_nm_model}/{lambda_eff:.3f}) = {eta_expected:.3f}")
+        print("=" * 60)
+
         # Determine Delta_WF range from experimental data
         if exp_data is not None and len(exp_data['Delta_WF']) > 0:
             Delta_WF_min = min(exp_data['Delta_WF']) - 0.05
@@ -512,7 +537,7 @@ def create_comparison_CL_vs_WF_plot(
         Delta_WF_theory = np.linspace(Delta_WF_min, Delta_WF_max, 100)
         Delta_CL_theory = []
 
-        for Delta_WF in Delta_WF_theory:
+        for i, Delta_WF in enumerate(Delta_WF_theory):
             # From ΔWF to Phi_s: ΔWF = -Phi_s (ignoring adsorbates)
             Phi_s_eV = -Delta_WF
 
@@ -529,10 +554,31 @@ def create_comparison_CL_vs_WF_plot(
             # Get potential profile from model
             V_z = model.get_potential(Phi_s_eV, z_array)
 
+            # DEBUG: First point details
+            if i == 0:
+                print(f"\n=== First Point Calculation ===")
+                print(f"ΔWF = {Delta_WF:.3f} eV")
+                print(f"Φs = -ΔWF = {Phi_s_eV:.3f} eV")
+                print(f"z_max = 3λ = {z_max*1e9:.3f} nm")
+                print(f"z_array: {len(z_array)} points from 0 to {z_max*1e9:.3f} nm")
+                print(f"V_z shape: {V_z.shape}")
+                print(f"V(0) = {V_z[0]:.6e} J = {V_z[0]/1.602e-19:.3f} eV")
+                if W_m_model and W_m_model < z_max:
+                    idx_W = np.argmin(np.abs(z_array - W_m_model))
+                    print(f"V(W) at z={z_array[idx_W]*1e9:.3f}nm = {V_z[idx_W]:.6e} J = {V_z[idx_W]/1.602e-19:.3f} eV")
+                print(f"V_max = {np.max(V_z):.6e} J = {np.max(V_z)/1.602e-19:.3f} eV")
+                print(f"V_min = {np.min(V_z):.6e} J = {np.min(V_z)/1.602e-19:.3f} eV")
+
             # Calculate XPS shift
             Delta_E_CL, _ = calculate_core_level_shift(
                 V_z, z_array, lambda_nm, theta_deg
             )
+
+            # DEBUG: First point result
+            if i == 0:
+                print(f"Result: ΔE_CL = {Delta_E_CL:.3f} eV")
+                print(f"Ratio: |ΔE_CL/Φs| = {abs(Delta_E_CL/Phi_s_eV):.3f}")
+                print("=" * 60)
 
             Delta_CL_theory.append(Delta_E_CL)
 
@@ -541,6 +587,10 @@ def create_comparison_CL_vs_WF_plot(
         # Calculate theoretical η from slope
         if len(Delta_WF_theory) > 2:
             eta_theory = np.polyfit(Delta_WF_theory, Delta_CL_theory, 1)[0]
+
+            print(f"\n=== Final Result ===")
+            print(f"η_theory (from linear fit slope) = {eta_theory:.3f}")
+            print("=" * 60)
 
         # Plot theory curve
         fig.add_trace(go.Scatter(
@@ -586,7 +636,7 @@ def create_comparison_CL_vs_WF_plot(
                 hovertemplate=f'Linear fit<br>η={slope:.3f}<br>R²={r_value**2:.4f}<extra></extra>'
             ))
 
-            # Add annotation with fit statistics
+            # Add annotation with fit statistics (positioned at top-right to avoid overlapping theory curve)
             annotation_text = f"<b>Experimental Fit:</b><br>η_exp = {slope:.3f} ± {std_err:.3f}<br>R² = {r_value**2:.4f}"
             if eta_theory is not None:
                 annotation_text += f"<br><br><b>Theory:</b><br>η_theory = {eta_theory:.3f}<br>Difference: {abs(slope-eta_theory)/eta_theory*100:.1f}%"
@@ -594,13 +644,14 @@ def create_comparison_CL_vs_WF_plot(
             fig.add_annotation(
                 text=annotation_text,
                 xref="paper", yref="paper",
-                x=0.02, y=0.98,
-                xanchor='left', yanchor='top',
+                x=0.98, y=0.98,  # Top-right corner
+                xanchor='right', yanchor='top',  # Right-aligned
                 showarrow=False,
                 font=dict(size=11),
-                bgcolor="rgba(255,255,255,0.9)",
+                bgcolor="rgba(255,255,255,0.95)",  # Slightly more opaque
                 bordercolor="black",
-                borderwidth=1
+                borderwidth=1.5,
+                borderpad=8
             )
 
     # ========== 4. Legacy theory_data support ==========

@@ -458,11 +458,11 @@ def create_publication_comparison_figure(
             annotation_text += f"η_theory = {eta_theory:.3f}\n"
             annotation_text += f"Difference: {abs(slope-eta_theory)/eta_theory*100:.1f}%"
 
-        # Text box with white background
+        # Text box with white background (positioned at top-right to avoid overlapping theory curve)
         props = dict(boxstyle='round', facecolor='white',
-                    edgecolor='black', alpha=0.9, linewidth=1.5)
-        ax.text(0.02, 0.98, annotation_text, transform=ax.transAxes,
-               fontsize=11, verticalalignment='top', bbox=props)
+                    edgecolor='black', alpha=0.95, linewidth=1.5, pad=0.8)
+        ax.text(0.98, 0.98, annotation_text, transform=ax.transAxes,
+               fontsize=11, verticalalignment='top', horizontalalignment='right', bbox=props)
 
     # ========== 4. Legacy theory_data support ==========
     elif theory_data is not None:
