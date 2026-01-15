@@ -312,7 +312,7 @@ MIT License - see LICENSE file for details.
 
 ## Authors
 
-- **Aaron** - Initial development
+- **Zaiyang Zhang** - Initial development
 - **Claude (Anthropic)** - Code generation assistance
 
 ## Acknowledgments
