@@ -382,6 +382,6 @@ MIT License - see LICENSE file for details.
   title = {2DEG Surface Electron Gas Visualization Tool},
   author = {Zaiyang Zhang},
   year = {2025},
-  url = {https://github.com/yourusername/2DEG-S-P-toy}
+  url = {https://github.com/aaronderek/2DEG-S-P-toy}
 }
 ```
