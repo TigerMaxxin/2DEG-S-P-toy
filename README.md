@@ -4,6 +4,8 @@ Interactive tool for exploring two-dimensional electron gas (2DEG) physics at ox
 
 ![2DEG Visualization](https://img.shields.io/badge/physics-2DEG-blue) ![Python](https://img.shields.io/badge/python-3.8+-green) ![Streamlit](https://img.shields.io/badge/streamlit-1.28+-red)
 
+**Version**: v2.1.4 (2025-11-14)
+
 ## Features
 
 ### 🎯 Core Functionality
@@ -55,32 +57,48 @@ Interactive tool for exploring two-dimensional electron gas (2DEG) physics at ox
 
 ## Installation
 
-### Prerequisites
-- Python 3.8 or higher
+### Requirements
+- Python 3.8 or higher (3.11 recommended)
 - pip package manager
+- git (for cloning)
+- (Recommended) virtual environment via `venv`
 
-### Setup
+### Setup (Windows, macOS, Linux)
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/yourusername/2DEG-S-P-toy.git
+   cd 2DEG-S-P-toy
+   ```
+2. **Create and activate a virtual environment (recommended)**
+   - Windows:
+     ```bash
+     py -3.11 -m venv .venv
+     .venv\Scripts\activate
+     ```
+   - macOS/Linux:
+     ```bash
+     python3 -m venv .venv
+     source .venv/bin/activate
+     ```
+3. **Install dependencies**
+   ```bash
+   python -m pip install --upgrade pip
+   python -m pip install -r requirements.txt
+   ```
+4. **Run the app**
+   - Windows: `run_app.bat` or `python -m streamlit run app.py`
+   - macOS/Linux: `bash run.sh` or `streamlit run app.py`
+   - The UI opens at `http://localhost:8501`
 
-1. **Clone the repository**:
-```bash
-git clone https://github.com/yourusername/2DEG-S-P-toy.git
-cd 2DEG-S-P-toy
-```
-
-2. **Install dependencies**:
-```bash
-pip install -r requirements.txt
-```
-
-### Required Packages
+### Dependency summary
 ```
 streamlit>=1.28.0
 plotly>=5.17.0
-matplotlib>=3.7.0  # NEW: For publication exports
+matplotlib>=3.7.0
 numpy>=1.24.0
-scipy>=1.11.0      # Used for parameter fitting
+scipy>=1.11.0
 pandas>=2.0.0
-kaleido>=0.2.1     # For Plotly static image export
+kaleido>=0.2.1
 ```
 
 ## Usage
@@ -304,6 +322,11 @@ MIT License - see LICENSE file for details.
 - Visualizations created with Plotly
 
 ## Version History
+
+- **v2.1.4** (2025-11-14): Compatibility and documentation update
+  - Fixed XPS integration for NumPy 2.4+ (np.trapezoid) to resolve M1/M3 crashes
+  - Clarified installation, virtual environment, and run steps across Windows/macOS/Linux
+  - See [CHANGELOG.md](CHANGELOG.md) for details
 
 - **v2.1.2** (2025-11-12): Experiment comparison critical fixes
   - 🐛 **Fixed**: Sample data now shows physically reasonable In₂O₃ vacuum annealing behavior

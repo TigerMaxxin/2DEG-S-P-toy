@@ -93,7 +93,7 @@ for model_name, model in models.items():
 
     print(f"\nWeight function w(z):")
     print(f"  w(z=0) = {w_z[0]:.6e} m⁻¹")
-    print(f"  ∫w(z)dz = {np.trapz(w_z, z_array):.6f} (should ≈ 1)")
+    print(f"  ∫w(z)dz = {np.trapezoid(w_z, z_array):.6f} (should ≈ 1)")
 
     # Calculate XPS shift
     Delta_E_CL, eta_xps = calculate_core_level_shift(

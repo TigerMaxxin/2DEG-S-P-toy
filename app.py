@@ -18,7 +18,7 @@ from physics.constants import (
     M0, DEFAULT_M_STAR, DEFAULT_EPSILON_R, DEFAULT_TEMPERATURE,
     DEFAULT_W, DEFAULT_LAMBDA_XPS, M_STAR_RANGE, EPSILON_R_RANGE,
     TEMPERATURE_RANGE, W_RANGE, PHI_S_RANGE, LAMBDA_XPS_RANGE,
-    THETA_XPS_RANGE, DELTA_PHI_DIP_RANGE
+    THETA_XPS_RANGE, DELTA_PHI_DIP_RANGE, EPS0, Q, HBAR
 )
 from physics.xps import XPSModel, calculate_xps_weight
 from physics.units import ns_to_display, ns_from_display, m_to_nm, nm_to_m, J_to_eV
@@ -644,6 +644,10 @@ with tab2:
             👉 For multi-subband analysis, use **M1 (Triangular)** or **M3 (Parabolic)**.
             """)
 
+    # Self-Consistent S-P Diagnostic (M2 only) - TEMPORARILY HIDDEN
+    # TODO: Re-enable after fixing the visualization
+    pass
+
 # ============================================================================
 # TAB 3: EXPERIMENT COMPARISON
 # ============================================================================
@@ -1136,14 +1140,14 @@ with tab5:
 
     st.info("These features are currently under development and will be added in future versions.")
 
-    # Feature 1: Self-Consistent Diagnostic
+    # Feature 1: Self-Consistent S-P Diagnostic
     with st.expander("🔍 Self-Consistent S-P Diagnostic (Coming Soon)", expanded=False):
         st.markdown("""
         **Feature:** Visualize Schrödinger-Poisson self-consistent solution
 
         This will show:
-        - Gauss law: ns(F) = εF/q
-        - Quantum DOS: ns(F) from subband occupation
+        - Gauss law: nₛ(F) = εF/q
+        - Quantum DOS: nₛ(F) from subband occupation
         - Self-consistent intersection point
 
         **Status:** Planned for M2 (Fang-Howard) model

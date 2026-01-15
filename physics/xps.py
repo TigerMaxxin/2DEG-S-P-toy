@@ -68,7 +68,7 @@ def calculate_core_level_shift(V_z, z_array, lambda_nm, theta_deg):
 
     # Calculate weighted average: ΔE_CL = -∫ w(z)·V(z) dz
     # The negative sign is because we measure binding energy shift
-    Delta_E_CL_J = -np.trapz(w_z * V_z, z_array)
+    Delta_E_CL_J = -np.trapezoid(w_z * V_z, z_array)
     Delta_E_CL_eV = J_to_eV(Delta_E_CL_J)
 
     # Calculate effective sampling factor η

@@ -301,7 +301,7 @@ P(z) ∝ exp(-z / λeff)
 
 **代码实现** (`physics/xps.py:69-72`)：
 ```python
-Delta_E_CL_J = -np.trapz(w_z * V_z, z_array)
+Delta_E_CL_J = -np.trapezoid(w_z * V_z, z_array)
 Delta_E_CL_eV = J_to_eV(Delta_E_CL_J)
 ```
 
