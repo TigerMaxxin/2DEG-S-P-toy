@@ -380,7 +380,7 @@ MIT License - see LICENSE file for details.
 ```bibtex
 @software{2deg_visualization_2025,
   title = {2DEG Surface Electron Gas Visualization Tool},
-  author = {Aaron},
+  author = {Zaiyang Zhang},
   year = {2025},
   url = {https://github.com/yourusername/2DEG-S-P-toy}
 }
