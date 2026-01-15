@@ -66,7 +66,7 @@ Interactive tool for exploring two-dimensional electron gas (2DEG) physics at ox
 ### Setup (Windows, macOS, Linux)
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/yourusername/2DEG-S-P-toy.git
+   git clone https://github.com/aaronderek/2DEG-S-P-toy
    cd 2DEG-S-P-toy
    ```
 2. **Create and activate a virtual environment (recommended)**
